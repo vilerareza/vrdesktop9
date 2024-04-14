@@ -1,17 +1,100 @@
 <ServerItem>:
-    serverImage : server_image
-    statusImage : status_image
 
-    Image:
+    img_server : server_image
+    img_status : img_status
+    btn_server_change : btn_server_change
+    lbl_address : lbl_address
+
+
+    FitImage:
         id : server_image
         pos_hint : {'center_x':0.5, 'center_y': 0.5}
         size_hint : (1,1)
-        source : 'images/settingview/servericon_normal.png'
-    Image:
-        id : status_image
-        top: root.top - dp(25)
-        right : root.right - dp(45)
-        #pos_hint : {'center_x':0.5, 'center_y': 0.5}
+        source : 'images/settingview/server_item.png'
+        fit_mode: 'fill'
+        radius: 15, 15, 15, 15
+        canvas.before:
+            Color:
+                rgb : (0.15,0.4,0.15)
+            Rectangle:
+                size : self.size
+                pos : self.pos
+
+    #Label:
+    #    id: lbl_server
+    #    text: 'Server: '
+    #    size_hint : (0.3, 0.5)
+    #    text_size : self.size
+    #    halign : 'left'
+    #    valign : 'middle'
+    #    font_size: dp(17)
+    #    font_family: "arial"
+    #    pos_hint: {'x': 0.01, 'center_y': 0.6 }
+        
+    #    canvas.before:
+    #        Color:
+    #            rgb : (0.15,0.2,0.3)
+    #        Rectangle:
+    #            size : self.size
+    #            pos : self.pos
+
+    Label:
+        id : lbl_address
+        markup : True
+        text: root.str_title
         size_hint : (None, None)
-        size : (dp(30), dp(30))
-        source : 'images/settingview/statusicon_inactive.png'
+        size : (dp(350), dp(40))
+        text_size : self.size
+        halign : 'left'
+        valign : 'middle'
+        font_size : dp(28)
+        font_family : "arial"
+        pos_hint: {'x': 0.03, 'center_y': 0.6 }
+        
+        #canvas.before:
+        #    Color:
+        #        rgb : (0.15,0.7,0.3)
+        #    Rectangle:
+        #        size : self.size
+        #        pos : self.pos
+
+    Image:
+        id : img_status
+        top: lbl_address.y
+        x :  lbl_address.x
+        size_hint : (None, None)
+        size : (dp(25), dp(25))
+        source : 'images/settingview/disconnected.png'
+        fit_mode: 'contain'
+
+    Label:
+        id : lbl_status
+        markup : True
+        text: root.str_status
+        size_hint : (None, None)
+        size : (dp(150), dp(20))
+        text_size : self.size
+        halign : 'left'
+        valign : 'middle'
+        font_size : dp(18)
+        font_family : "arial"
+        x : img_status.right + dp(10)
+        y : img_status.y
+
+
+    ImageButton:
+        id : btn_server_change
+        source: 'images/settingview/btn_chg_server.png'
+        pos_hint: {'right': 0.95, 'center_y':0.5}
+        # size_hint: (0.1, 0.3)
+        size_hint: (None, None)
+        size: (dp(120), dp(35))
+        on_press : root.button_press_callback(self)
+        on_release : root.button_release_callback(self)
+        fit_mode: 'contain'
+        #canvas.before:
+        #    Color:
+        #        rgb : (0.15,0.9,0.3)
+        #    Rectangle:
+        #        size : self.size
+        #        pos : self.pos

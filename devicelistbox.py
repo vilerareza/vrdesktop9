@@ -23,8 +23,6 @@ class DeviceListBox(BoxLayout):
         if button == self.btnDeviceAdd:
             button.source = 'images/settingview/btn_add_icon.png'
             self.settingContentBox.change_config(self)
-            # Clear selection on serverBox or deviceListLayout
-            self.serverBox.deselect_serverItem()
             self.deviceListLayout.clear_selection()
         elif button == self.btnRefresh:
             button.source = 'images/settingview/btn_refresh.png'

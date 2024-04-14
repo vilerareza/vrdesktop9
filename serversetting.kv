@@ -1,0 +1,69 @@
+<ServerSetting>:
+
+    server_address_label: server_address_label
+    server_address_text: server_address_text
+    btn_save: btn_save
+    btn_cancel: btn_cancel
+
+    TextInput:
+        id: server_address_text
+        foreground_color: (0.1, 0.1, 0.1)
+        multiline : False
+        font_size: dp(22)
+        font_family: "arial"
+        size_hint: (0.8, None)
+        height: dp(35)
+        pos_hint : {'center_x':0.5, 'center_y': 0.65}
+        background_normal : "images/settingview/text_normal.png"
+        background_active : "images/settingview/text_normal.png"
+        background_disabled_normal : "images/settingview/text_normal.png"
+
+    Label:
+        id: server_address_label
+        text : 'Server Address'
+        text_size : self.size
+        font_size : dp(16)
+        font_family : 'arial'
+        halign : 'left' 
+        valign : 'middle'
+        x: server_address_text.x
+        y: server_address_text.top
+        size_hint: (0.8, None)
+        height: dp(40)
+
+
+    ImageButton:
+        id : btn_cancel
+        source: 'images/settingview/btn_cancel.png'
+        fit_mode: 'contain'
+        right: server_address_text.right
+        pos_hint: {'y': 0}
+        size_hint: (None, None)
+        size: (dp(100), dp(40))
+        on_press: root.button_press_callback(self)
+        on_release: root.button_release_callback(self)
+
+
+    ImageButton:
+        id : btn_save
+        source: 'images/settingview/btn_save_server.png'
+        fit_mode: 'contain'
+        right: btn_cancel.x - dp(20)
+        pos_hint: {'y': 0}
+        size_hint: (None, None)
+        size: (dp(100), dp(40))
+        on_press: root.button_press_callback(self)
+        on_release: root.button_release_callback(self)
+
+
+    ImageButton:
+        id : btn_test
+        source: 'images/settingview/btn_test.png'
+        fit_mode: 'contain'
+        right: server_address_text.right
+        size_hint: (None, None)
+        size: (dp(120), dp(25))
+        x : server_address_text.x
+        top : server_address_text.y - dp(15)
+        #on_press: root.button_press_callback(self)
+        #on_release: root.button_release_callback(self)

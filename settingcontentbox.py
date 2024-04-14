@@ -6,9 +6,9 @@ from kivy.uix.label import Label
 
 from serveritem import ServerItem
 from deviceitem import DeviceItem
-from settingcontentserver import SettingContentServer
-from settingcontentdevice import SettingContentDevice
-from settingadddevice import SettingAddDevice
+from serversetting import ServerSetting
+from settingcontentcamera import SettingContentCamera
+from settingaddcamera import SettingAddCamera
 
 Builder.load_file("settingcontentbox.kv")
 
@@ -18,21 +18,20 @@ class SettingContentBox(BoxLayout):
     deviceList = ObjectProperty(None)
     noSelectionLabel = ObjectProperty(None)
     #noSelectionText = 'Select Server or Camera for Setting...'
-    settingContentServer = SettingContentServer()
-    settingContentDevice = SettingContentDevice()
-    settingAddDevice = SettingAddDevice()
+    settingContentServer = ServerSetting()
+    settingContentCamera = SettingContentCamera()
+    settingAddCamera = SettingAddCamera()
 
     def change_config(self, obj = None):
         '''Changing the child widget based on the obj selected'''
         self.clear_widgets()
         if type(obj) == DeviceItem:
             # Filling the settingContentDevice with object attribute
-            self.settingContentDevice.populate(obj)
+            self.settingContentCamera.populate(obj)
             # Adding the widget
-            self.add_widget(self.settingContentDevice)
+            self.add_widget(self.settingContentCamera)
         elif obj == self.deviceList:
-            # Add device. Show settingAddDevice
-            self.add_widget(self.settingAddDevice)
+            self.add_widget(self.settingAddCamera)
         elif type(obj) == ServerItem:
             # Server setting. Show settingContentServer
             self.settingContentServer.fill(obj)

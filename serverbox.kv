@@ -1,25 +1,41 @@
 <ServerBox>:
-    serverItem : server_item
-    titleLabel : title_label
+
+    server_item : server_item
+    #titleLabel : title_label
+        
+    #canvas.before: 
+    #    Color:
+    #        rgb : (0.8,0.5,0.5)
+    #    Rectangle:
+    #        size : self.size
+    #        pos : self.pos
+
 
     ServerItem:
         id : server_item
-        size_hint : (None, None)
-        size : (dp(150), dp(120))
-        center_x : root.center_x
-        center_y : root.center_y
-        #on_state : root.item_press_callback(self)
-        on_touch_down: root.item_touch_down(*args)
+        setting_view: root.setting_view
+        size_hint : (0.95, 0.9)
+        pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+        #center_x : root.center_x
+        #center_y : root.center_y
 
-    Label:
-        id: title_label
-        text: "Server"
-        size_hint : (None, None)
-        size: dp(150), dp(20)
-        text_size : self.size
-        halign : 'left'
-        valign : 'middle'
-        font_size: 17
-        font_family: "arial"
-        x: root.x + dp(30)
-        top: root.top - dp(20)
+
+    #Label:
+    #    id: title_label
+    #    text: "Server"
+    #    size_hint : (None, None)
+    #    size: dp(150), dp(20)
+    #    text_size : self.size
+    #    halign : 'left'
+    #    valign : 'middle'
+    #    font_size: 17
+    #    font_family: "arial"
+    #    x: root.x + dp(30)
+    #    top: root.top - dp(20)
+        
+    #    canvas.before:
+    #        Color:
+    #            rgb : (0.15,0.4,0.3)
+    #        Rectangle:
+    #            size : self.size
+    #            pos : self.pos

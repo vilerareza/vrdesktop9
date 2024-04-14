@@ -1,178 +1,162 @@
-<SettingAddDevice>:
+<SettingContentCamera>:
     titleLabel: title_label
-    deviceNameLabel: device_name_label
-    deviceNameText: device_name_text
-    wifiNameLabel: wifi_name_label
-    wifiNameText: wifi_name_text
-    wifiPassLabel: wifi_pass_label
-    wifiPassText: wifi_pass_text
-    visionAILabel: visionai_label
-    visionAISwitch: visionai_switch
-    btnAdd: btn_add
-    btnCancel: btn_cancel
-    qrImage : qr_image
-    btnClose: btn_close
+    lbl_name: lbl_name
+    txt_name: txt_name
+    lbl_stream_url: lbl_stream_url
+    txt_stream_url: txt_stream_url
+    lbl_desc: lbl_desc
+    txt_desc: txt_desc
+    lbl_enable: lbl_enable
+    sw_enable: sw_enable
+    btnSaveEdit: btn_save_edit
+    btnRemove: btn_remove
 
     Label:
         id: title_label
         x_offset : 0.2
-        text : root.titleLabelText
+        text : 'Device Info'
         font_size : 24
         font_family : 'arial' 
         halign : 'center' 
         valign : 'middle' 
         #pos_hint : {'x':self.x_offset} #, 'top': 0.95}
-        center_x : device_name_text.center_x
+        center_x : txt_name.center_x
         top : root.top - dp(20)
         size_hint : (None, None)
         size : (dp(180), dp(30))
         text_size : self.size
 
-    Label:
-        id: device_name_label
-        x_offset : 0.2
-        text : 'Device Name'
-        text_size : self.size
-        font_size : 16
-        font_family : 'arial'
-        halign : 'left' 
-        valign : 'bottom'
-        pos_hint : {'x':self.x_offset}
+    ImageButton:
+        id: btn_remove
+        source: 'images/settingview/btn_remove.png'
+        size_hint: (None, None)
+        size: (dp(40), dp(40))
+        right : txt_name.right
         top: title_label.y - dp(20)
-        size_hint : (None, None)
-        size : dp(120), dp(20)
+        on_press: root.button_press_callback(self)
+        on_release: root.button_release_callback(self)
 
-    TextInput:
-        id: device_name_text
-        x_offset : 0.2
-        foreground_color: (0.1, 0.1, 0.1)
-        multiline : False
-        font_size: 20
-        font_family: "arial"
-        size_hint: None, None
-        size: dp(300), dp(35)
-        pos_hint : {'x':self.x_offset}
-        top: device_name_label.y - dp(3)
-        background_normal : "images/settingview/text_normal.png"
-        background_disabled_normal : "images/settingview/text_normal.png"
-        background_active : "images/settingview/text_normal.png"
+    ImageToggle:
+        id: btn_save_edit
+        source: 'images/settingview/btn_edit.png'
+        size_hint: (None, None)
+        size: (dp(40), dp(40))
+        right : btn_remove.x - dp(10)
+        top: btn_remove.top
+        on_state : root.toggle_press_callback(self)
+        source : 'images/settingview/btn_save.png' if root.editMode == True else 'images/settingview/btn_edit.png'
 
     Label:
-        id: wifi_name_label
+        id: lbl_name
         x_offset : 0.2
-        text : 'Wifi Name'
+        text : 'Name'
         text_size : self.size
         font_size : 16
         font_family : 'arial'
         halign : 'left' 
         valign : 'bottom'
         pos_hint : {'x':self.x_offset}
-        top: device_name_text.y - dp(12)
+        top: btn_save_edit.y - dp(5)
         size_hint : (None, None)
         size : dp(120), dp(20)
 
     TextInput:
-        id: wifi_name_text
+        id: txt_name
         x_offset : 0.2
         foreground_color: (0.1, 0.1, 0.1)
+        #background_color: (0.8, 0.8, 0.8)
         multiline : False
         font_size: 20
         font_family: "arial"
         size_hint: None, None
         size: dp(300), dp(35)
         pos_hint : {'x':self.x_offset}
-        top: wifi_name_label.y - dp(3)
+        top: lbl_name.y - dp(3)
         background_normal : "images/settingview/text_normal.png"
         background_disabled_normal : "images/settingview/text_normal.png"
         background_active : "images/settingview/text_normal.png"
+        disabled: True if root.editMode == False else False
 
     Label:
-        id: wifi_pass_label
+        id: lbl_stream_url
         x_offset : 0.2
-        text : 'Wifi Password'
+        text : 'Stream URL'
         text_size : self.size
         font_size : 16
         font_family : 'arial'
         halign : 'left' 
         valign : 'bottom'
         pos_hint : {'x':self.x_offset}
-        top: wifi_name_text.y - dp(12)
+        top: txt_name.y - dp(15)
         size_hint : (None, None)
         size : dp(120), dp(20)
 
     TextInput:
-        id: wifi_pass_text
+        id: txt_stream_url
         x_offset : 0.2
         foreground_color: (0.1, 0.1, 0.1)
+        #background_color: (0.8, 0.8, 0.8)
         multiline : False
         font_size: 20
         font_family: "arial"
         size_hint: None, None
         size: dp(300), dp(35)
         pos_hint : {'x':self.x_offset}
-        top: wifi_pass_label.y - dp(3)
+        top: lbl_stream_url.y - dp(3)
         background_normal : "images/settingview/text_normal.png"
         background_disabled_normal : "images/settingview/text_normal.png"
         background_active : "images/settingview/text_normal.png"
+        disabled: True if root.editMode == False else False
 
     Label:
-        id: visionai_label
+        id: lbl_desc
         x_offset : 0.2
-        text : 'Vision AI'
+        text : 'Description'
         text_size : self.size
         font_size : 16
         font_family : 'arial'
         halign : 'left' 
         valign : 'bottom'
         pos_hint : {'x':self.x_offset}
-        top: wifi_pass_text.y - dp(25)
+        top: txt_stream_url.y - dp(15)
+        size_hint : (None, None)
+        size : dp(120), dp(20)
+
+    TextInput:
+        id: txt_desc
+        x_offset : 0.2
+        foreground_color: (0.1, 0.1, 0.1)
+        #background_color: (0.8, 0.8, 0.8)
+        multiline : False
+        font_size: 20
+        font_family: "arial"
+        size_hint: None, None
+        size: dp(300), dp(35)
+        pos_hint : {'x':self.x_offset}
+        top: lbl_desc.y - dp(3)
+        background_normal : "images/settingview/text_normal.png"
+        background_disabled_normal : "images/settingview/text_normal.png"
+        background_active : "images/settingview/text_normal.png"
+        disabled: True if root.editMode == False else False
+
+    Label:
+        id: lbl_enable
+        x_offset : 0.2
+        text : 'Enabled'
+        text_size : self.size
+        font_size : 20
+        font_family : 'arial'
+        halign : 'left' 
+        valign : 'bottom'
+        pos_hint : {'x':self.x_offset}
+        top: txt_desc.y - dp(25)
         size_hint : (None, None)
         size : dp(120), dp(20)
     
     Switch:
-        id: visionai_switch
+        id: sw_enable
         size_hint : (None, None)
-        size : (dp(90), dp(30))
-        right : wifi_name_text.right
-        center_y : visionai_label.center_y
-        active: True
-
-    ImageButton:
-        id : btn_add
-        source: 'images/settingview/btn_add.png'
-        size_hint: (None, None)
-        size: (dp(150), dp(35))
-        x : visionai_label.x
-        top: visionai_switch.y - dp(20)
-        on_press: root.button_press_callback(self)
-        on_release: root.button_release_callback(self), root.add_new_device(device_name_text, wifi_name_text, wifi_pass_text)
-        opacity: 1.0 if self.disabled == False else 0.7
-
-    ImageButton:
-        id : btn_cancel
-        source: 'images/settingview/btn_cancel.png'
-        size_hint: (None, None)
-        size: (dp(135), dp(35))
-        x : btn_add.right + dp(15)
-        y : btn_add.y
-        on_press: root.button_press_callback(self)
-        on_release: root.button_release_callback(self)
-        opacity: 1.0 if self.disabled == False else 0.7
-
-    Image:
-        id: qr_image
-        size_hint : (None, None)
-        size: (dp(180), dp(180))
-        source: "images/settingview/qr_empty.png"
-        center_x : device_name_text.center_x
-        top: btn_add.y - dp(20)
-
-    ImageButton:
-        id : btn_close
-        source: 'images/settingview/btn_close.png'
-        size_hint: (None, None)
-        size: (dp(90), dp(30))
-        center_x : qr_image.center_x
-        top: qr_image.y - dp(20)
-        on_press: root.button_press_callback(self)
-        on_release: root.button_release_callback(self)
+        size : (dp(90), dp(40))
+        right : txt_desc.right
+        center_y : lbl_enable.center_y
+        disabled: True if root.editMode == False else False

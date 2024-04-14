@@ -42,12 +42,9 @@ class DeviceList (FocusBehavior, CompoundSelectionBehavior, StackLayout):
     def select_node(self, node):
         node.image.source = 'images/device_selected7.png'
         node.label.font_size = 16
-        node.label.text="[color=ffffff]"+node.deviceName+"[/color]"
+        node.label.text="[color=ffffff]"+node.name+"[/color]"
         self.selectedDevice = node
         self.isDeviceSelected = True
-        # Clearing the selection in serverBox layout
-        if self.serverBox:
-            self.serverBox.deselect_serverItem()
         # Notify the setting content layout to change the content
         if self.settingContentBox:
             self.settingContentBox.change_config(node)
@@ -57,7 +54,7 @@ class DeviceList (FocusBehavior, CompoundSelectionBehavior, StackLayout):
         super().deselect_node(node)
         node.image.source = 'images/not_device_selected5.png'
         node.label.font_size = 16
-        node.label.text="[color=cccccc]"+node.deviceName+"[/color]"
+        node.label.text="[color=cccccc]"+node.name+"[/color]"
     
     def clear_selection(self, widget=None):
         return super().clear_selection()

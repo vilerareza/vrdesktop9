@@ -127,6 +127,7 @@ class MultiView(BoxLayout):
         t.daemon = True
         t.start()
 
+
     def create_deviceicon_livebox(self, devices):
         '''Create device icon and live box based on 'get devices' response from database'''
 
@@ -136,37 +137,43 @@ class MultiView(BoxLayout):
 
         try:
             for device in devices:
-                hostName = device ['hostName']
-                deviceName = device['deviceName']
-                deviceVisionAI = device['visionAI']
+                device_name = device ['name']
+                stream_url = device['stream_url']
+                device_enabled = device['enabled']
+
                 # Fill device icon list
                 self.deviceIcons.append(DeviceIcon(
-                    hostName = hostName,
-                    deviceName = deviceName,
+                    device_name = device_name,
+                    stream_url = stream_url,
+                    device_enabled = device_enabled,
                     size_hint = (None, None),
                     size = (181, 45)
                     )
                 )
+
                 # Fill live box object list
                 self.liveBoxes.append(LiveBox(
-                    device_name = deviceName
+                    device_name = device_name
                     )
                 )
             # Add deviceIcon content to selection box
             add_deviceicons_to_selectionbox(device_icons = self.deviceIcons,container = self.selectionBox)
             return True
+        
         except Exception as e:
             print (f'multiview:create_device_icon_livebox: {e}')
             return False
+
 
     def start_icons(self):
         '''Start the deviceIcon object to get the device IP'''
         if (len(self.deviceIcons) > 0):
             for deviceIcon in self.deviceIcons:
                 # Get the device IP
-                deviceIcon.get_device_ip()
+                deviceIcon.ping_device()
                 # Binding the touch down event
                 deviceIcon.bind(on_touch_down=self.icon_touch_action)
+
 
     def send_request(self, server_ip, server_name, port, url, timeout = 3):
         '''Send request using server_ip, if it fails try again using server_name'''

@@ -13,47 +13,48 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from mylayoutwidgets import ImageButton, ImageToggle
 
-Builder.load_file("settingcontentdevice.kv")
+Builder.load_file("settingcontentcamera.kv")
 
-class SettingContentDevice(FloatLayout):
+class SettingContentCamera(FloatLayout):
     editMode = BooleanProperty(False)
     titleLabel = ObjectProperty(None)
-    deviceNameLabel = ObjectProperty(None)
-    deviceNameText = ObjectProperty(None)
-    wifiNameLabel = ObjectProperty(None)
-    wifiNameText = ObjectProperty(None)
-    wifiPassLabel = ObjectProperty(None)
-    wifiPassText = ObjectProperty(None)
-    visionAILabel = ObjectProperty(None)
-    visionAISwitch = ObjectProperty(None)
+    lbl_name = ObjectProperty(None)
+    txt_name = ObjectProperty(None)
+    lbl_stream_url = ObjectProperty(None)
+    txt_stream_url = ObjectProperty(None)
+    lbl_desc = ObjectProperty(None)
+    txt_desc = ObjectProperty(None)
+    lbl_enable = ObjectProperty(None)
+    sw_enable = ObjectProperty(None)
     btnSaveEdit = ObjectProperty(None)
     btnRemove = ObjectProperty(None)
-    qrImage = ObjectProperty(None)
     isReset = False
 
-    def __init__(self, server_address_file='data/serveraddress.p', qr_save_dir ='images/temp/qr/', **kwargs):
+    def __init__(self, server_address_file='data/serveraddress.p', **kwargs):
         super().__init__(**kwargs)
         # Getting the server adrress
         self.serverAddressFile = server_address_file
-        self.qrSaveDir = qr_save_dir
 
     def save_device_to_db(self, *args):
         '''Save attribute to selected device'''
         if self.validate_entry(*args):
             # User pressed "Save"
-            deviceID = self.deviceObjID
-            newDeviceName = self.deviceNameText.text
-            newWifiName = self.wifiNameText.text
-            newWifiPass = self.wifiPassText.text
-            newVisionAI = self.visionAISwitch.active
-            deviceData = {'deviceName': newDeviceName, 'showName': '', 'wifiName': newWifiName, 'wifiPass': newWifiPass, 'visionAI' : newVisionAI}
+            device_id = self.device_id
+            device_name = self.txt_name.text
+            stream_url = self.txt_stream_url.text
+            device_desc = self.txt_desc.text
+            device_enabled = self.sw_enable.active
+            deviceData = {'name': device_name,
+                          'stream_url': stream_url, 
+                          'desc': device_desc, 
+                          'enabled' : device_enabled}
             serverIP, serverName = self.get_server_address()
-            isSuccess, r = self.send_request('put', serverIP, serverName, 8000, f'api/device/{deviceID}/', deviceData, 5)
+            isSuccess, r = self.send_request('put', serverIP, serverName, 8000, f'api/device/{device_id}/', deviceData, 5)
             if isSuccess:
                 print (r.status_code)
                 if r.status_code == 200:
                     # Get the new device attribute (json) form the sever
-                    newDevice = self.get_device_detail(serverIP, serverName, deviceID)
+                    newDevice = self.get_device_detail(serverIP, serverName, device_id)
                     # Update the current deviceitem
                     self.parent.update_deviceitem(newDevice)
 
@@ -161,60 +162,40 @@ class SettingContentDevice(FloatLayout):
         # Setting isReset back to False to enable the saving to database when the btnSaveEdit toggle event is fired.
         self.isReset = False
         # Reset the text inputs bg color 
-        self.deviceNameText.background_color = (1, 1, 1)
-        self.wifiNameText.background_color = (1, 1, 1)
-        self.wifiPassText.background_color = (1, 1, 1)
+        self.txt_name.background_color = (1, 1, 1)
+        self.txt_stream_url.background_color = (1, 1, 1)
+        self.txt_desc.background_color = (1, 1, 1)
 
     def populate(self, device_obj):
         '''Populate the view'''
         if self.get_device_obj(device_obj):
-            self.fill (self.deviceObjName, self.deviceObjHostName, self.deviceObjWifiName, self.deviceObjWifiPass, self.deviceObjVisionAI)
+            self.fill (self.device_name, 
+                       self.device_stream_url, 
+                       self.device_desc, 
+                       self.device_enabled)
 
     def get_device_obj(self, device_obj):
         '''Getting attribute of selected device object'''
-        isDeviceObj = False
+        is_device = False
         if device_obj:
-            self.deviceObjID = device_obj.deviceID
-            self.deviceObjName = device_obj.deviceName
-            self.deviceObjHostName = device_obj.hostName
-            self.deviceObjWifiName = device_obj.wifiName
-            self.deviceObjWifiPass = device_obj.wifiPass
-            self.deviceObjVisionAI = device_obj.deviceVisionAI
-            isDeviceObj = True
-        return isDeviceObj
+            self.device_id = device_obj.device_id
+            self.device_name = device_obj.name
+            self.device_stream_url = device_obj.stream_url
+            self.device_desc = device_obj.desc
+            self.device_enabled = device_obj.enabled
+            is_device = True
+        return is_device
         
 
-    def fill(self, device_obj_name, device_obj_host_name, device_obj_wifi_name, device_obj_wifi_pass, device_obj_visionai):
-        
-        def generate_qr(qr_data):
-            # Remove previous qr image file (if exist)
-            qrImage = os.listdir(self.qrSaveDir)
-            for image in qrImage:
-                os.remove(os.path.join(self.qrSaveDir, image))
-            # Init QR generator
-            qr = qrcode.QRCode(
-                version=5,
-                error_correction=qrcode.constants.ERROR_CORRECT_M,
-                box_size=5,
-                border=4)
-            data = json.dumps(qr_data)
-            qr.add_data(str(data))
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            # Saving QR image and display it
-            qrFileName = f'{self.qrSaveDir}{str(uuid.uuid4())[0:8]}.png'
-            img.save(qrFileName)
-            self.qrImage.source = qrFileName
-
-        # Getting server address
-        serverName, serverIP = self.get_server_address()
-        self.deviceNameText.text = device_obj_name
-        self.wifiNameText.text = device_obj_wifi_name
-        self.wifiPassText.text = device_obj_wifi_pass
-        self.visionAISwitch.active = device_obj_visionai
-        #qrData = {'server': serverAddress, 'host': host, 'name':deviceName, 'ssid':ssid, 'psk':psk}
-        qrData = {'server': serverName, 'host': device_obj_host_name, 'name':device_obj_name, 'ssid':device_obj_wifi_name, 'psk':device_obj_wifi_pass}
-        generate_qr(qrData)
+    def fill(self, 
+             device_name, 
+             device_stream_url, 
+             device_desc, 
+             device_enabled):
+        self.txt_name.text = device_name
+        self.txt_stream_url.text = device_stream_url
+        self.txt_desc.text = device_desc
+        self.sw_enable.active = device_enabled
 
     def remove_from_db(self):
         print ('remove from db')
@@ -241,7 +222,7 @@ class SettingContentDevice(FloatLayout):
                 if not self.isReset:
                     # Only save to db when toggle is not triggered by reset method
                     print ('save to db')
-                    self.save_device_to_db(self.deviceNameText, self.wifiNameText, self.wifiPassText)
+                    self.save_device_to_db(self.txt_name, self.txt_stream_url, self.txt_desc)
 
     def button_press_callback(self, button):
         if button == self.btnRemove:

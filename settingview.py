@@ -15,8 +15,10 @@ from devicelist import DeviceList
 from serverbox import ServerBox
 from devicelistbox import DeviceListBox
 from settingcontentbox import SettingContentBox
+from serversetting import ServerSetting
 from mylayoutwidgets import ImageButton
 
+from kivy.uix.popup import Popup
 
 Builder.load_file("settingview.kv")
 
@@ -24,13 +26,15 @@ class SettingView(BoxLayout):
 
     # Application manager onj
     manager = ObjectProperty(None)
-    serverBox = ObjectProperty(None)
+    server_box = ObjectProperty(None)
     devices = ListProperty([])
     deviceList = ObjectProperty(None)
     settingContentBox = ObjectProperty(None)
     lastConnDevFile = 'data/lastconnecteddev.p'
     isServerTimeout = False
     stopFlag = False
+    popupRequester = ObjectProperty(None)
+
 
     def __init__(self, server_address_file='data/serveraddress.p', **kwargs):
         super(SettingView, self).__init__(**kwargs)
@@ -45,6 +49,8 @@ class SettingView(BoxLayout):
         self.init_devices()
         # Start server status checker
         self.start_server_checker()
+        # Setting popup
+        self.setting_popup = SettingPopup(caller=self)
 
     def refresh_views(self):
         # Refresh the device list
@@ -52,38 +58,33 @@ class SettingView(BoxLayout):
         # Clear device list widgets
         self.deviceList.deviceListLayout.clear_widgets()
         # Resetting the setting content box
-        self.settingContentBox.no_selection_config()
-        # Clear selection on serverBox
-        self.serverBox.deselect_serverItem()
+        # self.settingContentBox.no_selection_config()
 
     def init_devices(self):
         '''Get devices from server and show it on the layout'''
         # Get the server IP from the file
-        serverIP, serverName = self.get_server_address()
-        if serverIP:
+        server_address = self.get_server_address()
+        if server_address:
             # Show popup message
             self.manager.open_popup(self)
             # Get devices from the server - perform in new thread
-            self.get_devices(server_ip=serverIP, server_name = serverName)
+            self.get_devices(server_address = server_address)
         else:
             print ('Unable to get server IP and server name. Nothing to init')
 
     def get_server_address(self):
         '''Deserialize server ip and server name from file'''
-        serverIP = ''
-        serverName = ''
+        server_address = ''
         try:
             # Load the server hostname:port from file
             with open(self.serverAddressFile, 'rb') as file:
-                serverAddress = pickle.load(file)
-            serverIP = serverAddress[0]
-            serverName = serverAddress[1]
+                server_address = pickle.load(file)
         except Exception as e:
             print(f'{e}: Failed loading server address from file: {e}')
         finally:
-            return [serverIP, serverName]
+            return server_address
 
-    def get_devices(self, server_ip, server_name):
+    def get_devices(self, server_address):
         print ('get devices')
         '''Retrieve devices from server REST API'''
 
@@ -92,7 +93,7 @@ class SettingView(BoxLayout):
             # Resetting the stop flag
             self.stopFlag = False
             # Send request to the server
-            isSuccess, r = self.send_request(server_ip, server_name, 8000, 'api/device/', 5)
+            isSuccess, r = self.send_request(server_address, 8000, 'api/device/', 5)
             # Sending request complete. Run callback function
             Clock.schedule_once(partial(callback, isSuccess, r), 0)
 
@@ -100,21 +101,19 @@ class SettingView(BoxLayout):
             if isSuccess:
                 devices_response = r.json()  # Produce list of dict
                 for device in devices_response:
-                    deviceID = device['id']
-                    deviceName = device['deviceName']
-                    hostName = device['hostName']
-                    wifiName = device['wifiName']
-                    wifiPass = device['wifiPass']
-                    deviceVisionAI = device['visionAI']
+                    device_id = device['id']
+                    name = device['name']
+                    stream_url = device['stream_url']
+                    desc = device['desc']
+                    enabled = device['enabled']
                     # Appending received devices to devices property
                     self.devices.append(
                         DeviceItem(
-                            deviceID = deviceID,
-                            deviceName = deviceName,
-                            host_name = hostName,
-                            wifi_name = wifiName,
-                            wifi_pass = wifiPass,
-                            deviceVisionAI = deviceVisionAI
+                            device_id = device_id,
+                            name = name,
+                            stream_url = stream_url,
+                            desc = desc,
+                            enabled = enabled,
                             )
                         )
                 # Storing connected devices into the file
@@ -142,11 +141,11 @@ class SettingView(BoxLayout):
         t.daemon = True
         t.start()
 
-    def send_request(self, server_ip, server_name, port, url, timeout = 3):
+    def send_request(self, server_address, port, url, timeout = 3):
         '''Send request using server_ip, if it fails try again using server_name'''
         try:
             # Try connecting using IP
-            r = requests.get(f'http://{server_ip}:{port}/{url}', timeout = timeout)
+            r = requests.get(f'http://{server_address}:{port}/{url}', timeout = timeout)
             return True, r
         except:
             # Server IP maybe already changed. Try to find the new IP using server_name           
@@ -154,11 +153,11 @@ class SettingView(BoxLayout):
                 if not self.stopFlag:
                     try:
                         # Try to get new IP
-                        newIP = socket.gethostbyname(server_name)
+                        newIP = socket.gethostbyname(server_address)
                         # Try again using new IP
                         r = requests.get(f'http://{newIP}:{port}/{url}', timeout = timeout)
                         # Save new IP to file
-                        self.update_server_addr(newIP, server_name)
+                        self.update_server_addr(newIP)
                         return True, r
                     except Exception as e:
                         print (f'{e}: Failed getting server ip. Retry {i+1}...')
@@ -175,7 +174,7 @@ class SettingView(BoxLayout):
 
     def start_server_checker(self):
         '''Start the server checker thread'''
-        self.serverBox.serverItem.start_server_checker()
+        self.server_box.server_item.start_server_checker()
 
     def update_server_addr(self, server_ip = '', server_name = ''):
         '''Serialize server ip and server name to file'''
@@ -198,12 +197,12 @@ class SettingView(BoxLayout):
         '''Update some device'''
         # Get current devices
         for device in self.devices:
-            if device.deviceID == updated_device['id']:
+            if device.device_id == updated_device['id']:
                 # Update the device property except its hostname (not changeable)
-                device.deviceName = updated_device['deviceName']
-                device.wifiName = updated_device['wifiName']
-                device.wifiPass = updated_device['wifiPass']
-                device.deviceVisionAI = updated_device['visionAI']
+                device.name = updated_device['name']
+                device.stream_url = updated_device['stream_url']
+                device.desc = updated_device['desc']
+                device.enabled = updated_device['enabled']
                 self.settingContentBox.change_config(device)
 
     def button_press_callback(self, widget):
@@ -227,4 +226,22 @@ class SettingView(BoxLayout):
         '''Stopping the server checker thread'''
         print ('stoping')
         self.stopFlag = True
-        self.serverBox.serverItem.stop_server_checker()
+        self.server_box.serverItem.stop_server_checker()
+
+    def open_popup(self, requester):
+        self.popupRequester = requester
+        self.setting_popup.title = 'Change Server...'
+        # Fill the popup with current server setting
+        self.setting_popup.server_setting.fill(self.server_box.server_item)
+        self.setting_popup.open()
+
+
+class SettingPopup(Popup):
+
+    server_setting = ObjectProperty(None)
+
+    def __init__(self, caller, **kwargs):
+        super(SettingPopup, self).__init__(**kwargs)
+        self.server_setting = ServerSetting(caller=caller)
+        self.add_widget(self.server_setting)
+
