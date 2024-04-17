@@ -4,9 +4,8 @@ import requests
 import socket
 
 from kivy.lang import Builder
-from kivy.properties import ObjectProperty
+from kivy.properties import ObjectProperty, StringProperty
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.label import Label
 from kivy.clock import Clock
 from mylayoutwidgets import ImageButton
 
@@ -19,9 +18,12 @@ class ServerSetting(FloatLayout):
     titleLabel = ObjectProperty(None)
     server_address_label = ObjectProperty(None)
     server_address_text = ObjectProperty(None)
-    myParent = ObjectProperty(None)
     btn_save = ObjectProperty(None)
     btn_cancel = ObjectProperty(None)
+    btn_test = ObjectProperty(None)
+    lbl_test = ObjectProperty(None)
+    img_test = ObjectProperty(None)
+    str_lbl_test = StringProperty('')
 
     serverAddressFile = 'data/serveraddress.p'
 
@@ -29,24 +31,6 @@ class ServerSetting(FloatLayout):
     def __init__(self, caller=None, **kwargs):
         super(ServerSetting, self).__init__(**kwargs)
         self.caller = caller
-
-    # def toggle_press_callback(self, button):
-    #     '''callback function for edit/save button'''
-    #     if button == self.btnSaveEdit:
-    #         if button.state == 'down':
-    #             self.editMode = True
-    #         else:
-    #             self.editMode = False
-    #             if not self.isReset:
-    #                 # Only save the server address when toggle is not triggered by reset method
-    #                 # Serializing server IP and server name
-    #                 print ('save server address')
-    #                 serverIP, serverName = self.save_server_addr(self.serverAddressText)
-    #                 if serverIP:
-    #                     # Test the connection to the server in different thread
-    #                     self.test_server(serverIP)
-    #                     # Refresh the devices
-    #                     #self.parent.reinit_views()
 
 
     def save_server_addr(self, entry_widget):
@@ -93,8 +77,8 @@ class ServerSetting(FloatLayout):
     def reset(self):
         # Reset the widgets state
         self.server_address_text.background_color = (1, 1, 1)
-        # self.testLabel.text = ''
-        # self.testImage.opacity = 0            
+        self.lbl_test.text = ''
+        self.img_test.opacity = 0            
     
     
     def fill(self, server_item):
@@ -112,25 +96,28 @@ class ServerSetting(FloatLayout):
         '''Start the server status checker thread'''
 
         def callback_ok(*args):
-            self.testLabel.text = 'Server OK'
-            self.testImage.opacity = 1
-            self.testImage.source = 'images/settingview/server_ok.png'
+            self.str_lbl_test = 'Server OK'
+            self.img_test.opacity = 1
+            self.img_test.source = 'images/settingview/server_ok.png'
         
         def callback_fail(*args):
-            self.testLabel.text = 'Server Not Found'
-            self.testImage.opacity = 1
-            self.testImage.source = 'images/settingview/server_fail.png'
+            self.str_lbl_test = 'Server Not Found'
+            self.img_test.opacity = 1
+            self.img_test.source = 'images/settingview/server_fail.png'
 
         def check():
             try:
+                print ('start', server_ip)
                 r = requests.get(f'http://{server_ip}:{port}/servercheck/', timeout = 5)
                 if r.status_code == 200 and r.text == 'ServerOk!':
                     Clock.schedule_once(callback_ok, 0)
+                    print ('OK')
                 else:
                     Clock.schedule_once(callback_fail, 0)
             except Exception as e:
                 Clock.schedule_once(callback_fail, 0)
                 print (f'test_server failed :{e}')
+
 
         t = Thread(target = check)
         t.daemon = True
@@ -142,20 +129,30 @@ class ServerSetting(FloatLayout):
             button.source =  'images/settingview/btn_save_server_down.png'
         elif button == self.btn_cancel:
             button.source =  'images/settingview/btn_cancel_down.png'
+        elif button == self.btn_test:
+            button.source =  'images/settingview/btn_test_down.png'
 
 
     def button_release_callback(self, button):
 
         if button == self.btn_save:
+            button.source = 'images/settingview/btn_save_server.png'
             server_address = self.save_server_addr(self.server_address_text)
             # Dismissing popup
             if server_address != '':
-                self.caller.setting_popup.dismiss()
-            button.source = 'images/settingview/btn_save_server.png'
-        
+                self.caller.server_setting_popup.dismiss()
+            
         elif button == self.btn_cancel:
-            # Dismissing popup
-            self.caller.setting_popup.dismiss()
             button.source =  'images/settingview/btn_cancel.png'
+            # Dismissing popup
+            self.caller.server_setting_popup.dismiss()
+            
+        elif button == self.btn_test:
+            button.source =  'images/settingview/btn_test.png'
+            # Validates entry and perform connection test to server
+            if self.validate_entry(self.server_address_text):
+                self.str_lbl_test = 'Testing...'
+                self.img_test.opacity = 0
+                self.test_server(self.server_address_text.text)
 
 

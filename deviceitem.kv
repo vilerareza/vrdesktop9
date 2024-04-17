@@ -1,13 +1,24 @@
 <DeviceItem>:
+
     image : image
     label : label
+    btn_edit : btn_edit
+    btn_delete : btn_delete
+    orientation :  'vertical'
     size_hint : (None, None)
-    size : (dp(95),dp(85)) 
+    size : (dp(180),dp(230)) 
+
+    #canvas.before:
+    #    Color:
+    #        rgb : (0.2,0.2,0.2)
+    #    Rectangle:
+    #        size : self.size
+    #        pos : self.pos
     
     Image:
         id : image
         source : root.imagePath
-        mipmap : True
+        fit_mode : 'contain'
         size_hint : (1,1)
         pos_hint : {'center_x':0.5, 'center_y':0.5}
     
@@ -23,3 +34,39 @@
         #pos_hint : {'right':0.9, 'top': 0.9}
         pos_hint : {'center_x':0.5, 'top': 1}
         markup : True
+        canvas.before:
+            Color:
+                rgb : (0.3,0.7,0.5)
+            Rectangle:
+                size : self.size
+                pos : self.pos
+    
+    ImageButton:
+        id : btn_edit
+        source: 'images/settingview/btn_edit_device.png'
+        fit_mode: 'contain'
+        size_hint: (None, None)
+        size: (dp(85), dp(30))
+        x : root.x + dp(20)
+        y : root.y + dp(10)
+        on_press : root.button_press_callback(self)
+        on_release : root.button_release_callback(self)
+        
+        #canvas.before:
+        #    Color:
+        #        rgb : (0.15,0.9,0.3)
+        #    Rectangle:
+        #        size : self.size
+        #        pos : self.pos
+
+    ImageButton:
+        id : btn_delete
+        source: 'images/settingview/btn_delete.png'
+        mipmap : True
+        fit_mode: 'contain'
+        size_hint: (None, None)
+        size: (dp(30), dp(30))
+        right : root.right - dp(20)
+        y : root.y + dp(10)
+        on_press : root.button_press_callback(self)
+        on_release : root.button_release_callback(self)

@@ -6,24 +6,24 @@ from devicelist import DeviceList
 Builder.load_file('devicelistbox.kv')
 
 class DeviceListBox(BoxLayout):
-    settingView = ObjectProperty(None)
+    
+    setting_view = ObjectProperty(None)
     deviceListLayout = ObjectProperty(None)
     serverBox = ObjectProperty(None)
     settingContentBox = ObjectProperty(None)
-    btnDeviceAdd = ObjectProperty(None)
+    btn_device_add = ObjectProperty(None)
     btnRefresh = ObjectProperty
 
     def button_press_callback(self, button):
-        if button == self.btnDeviceAdd:
+        if button == self.btn_device_add:
             button.source = 'images/settingview/btn_add_icon_down.png'
         elif button == self.btnRefresh:
             button.source = 'images/settingview/btn_refresh_down.png'
 
     def button_release_callback(self, button):
-        if button == self.btnDeviceAdd:
+        if button == self.btn_device_add:
             button.source = 'images/settingview/btn_add_icon.png'
-            self.settingContentBox.change_config(self)
-            self.deviceListLayout.clear_selection()
+            self.setting_view.open_popup(self)
         elif button == self.btnRefresh:
             button.source = 'images/settingview/btn_refresh.png'
             self.settingView.init_views()

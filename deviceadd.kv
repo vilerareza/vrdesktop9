@@ -1,0 +1,120 @@
+<DeviceAdd>:
+
+    lbl_name: lbl_name
+    txt_name: txt_name
+    lbl_stream_url: lbl_stream_url
+    txt_stream_url: txt_stream_url
+    lbl_desc: lbl_desc
+    txt_desc: txt_desc
+    btn_add: btn_add
+    btn_cancel: btn_cancel
+    sw_enable : sw_enable
+
+    TextInput:
+        id: txt_name
+        foreground_color: (0.1, 0.1, 0.1)
+        multiline : False
+        font_size: dp(20)
+        font_family: "arial"
+        size_hint: None, None
+        size: dp(300), dp(35)
+        pos_hint : {'center_x':0.5, 'center_y':0.75}
+        background_normal : "images/settingview/text_normal.png"
+        background_active : "images/settingview/text_normal.png"
+
+    Label:
+        id: lbl_name
+        text : 'Name'
+        text_size : self.size
+        font_size : dp(16)
+        font_family : 'arial'
+        halign : 'left' 
+        valign : 'bottom'
+        x : txt_name.x
+        y : txt_name.top + dp(2)
+        size_hint : (None, None)
+        size : dp(120), dp(20)
+
+    Switch:
+        id: sw_enable
+        size_hint : (None, None)
+        size : (dp(80), dp(30))
+        right : txt_name.right
+        y: lbl_name.top + dp (15)
+        active: True
+
+    Label:
+        id: lbl_stream_url
+        text : 'Stream URL'
+        text_size : self.size
+        font_size : dp(16)
+        font_family : 'arial'
+        halign : 'left' 
+        valign : 'bottom'
+        x : txt_name.x
+        top: txt_name.y - dp(15)
+        size_hint : (None, None)
+        size : dp(120), dp(20)
+
+    TextInput:
+        id: txt_stream_url
+        x_offset : 0.2
+        foreground_color: (0.1, 0.1, 0.1)
+        multiline : False
+        font_size: dp(20)
+        font_family: "arial"
+        size_hint: None, None
+        size: dp(300), dp(35)
+        pos_hint : {'center_x':0.5}
+        top: lbl_stream_url.y - dp(2)
+        background_normal : "images/settingview/text_normal.png"
+        background_active : "images/settingview/text_normal.png"
+
+    Label:
+        id: lbl_desc
+        text : 'Description'
+        text_size : self.size
+        font_size : dp(16)
+        font_family : 'arial'
+        halign : 'left' 
+        valign : 'bottom'
+        x : txt_stream_url.x
+        top: txt_stream_url.y - dp(15)
+        size_hint : (None, None)
+        size : dp(120), dp(20)
+
+    TextInput:
+        id: txt_desc
+        foreground_color: (0.1, 0.1, 0.1)
+        #background_color: (0.8, 0.8, 0.8)
+        multiline : False
+        font_size: dp(20)
+        font_family: "arial"
+        size_hint: None, None
+        size: dp(300), dp(35)
+        pos_hint : {'center_x':0.5}
+        top: lbl_desc.y - dp(2)
+        background_normal : "images/settingview/text_normal.png"
+        background_active : "images/settingview/text_normal.png"
+        
+    ImageButton:
+        id : btn_cancel
+        source: 'images/settingview/btn_cancel.png'
+        fit_mode: 'contain'
+        right: txt_name.right
+        pos_hint: {'y': 0}
+        size_hint: (None, None)
+        size: (dp(100), dp(35))
+        on_press: root.button_press_callback(self)
+        on_release: root.button_release_callback(self)
+
+    ImageButton:
+        id : btn_add
+        source: 'images/settingview/btn_add.png'
+        fit_mode: 'contain'
+        size_hint: (None, None)
+        size: (dp(150), dp(35))
+        right: btn_cancel.x - dp(20)
+        pos_hint: {'y': 0}
+        on_press: root.button_press_callback(self)
+        on_release: root.button_release_callback(self)

@@ -1,16 +1,17 @@
 <SettingView>:
+
     server_box : server_box
     deviceList : device_list
-    #settingContentBox : setting_content_box
     manager: app.manager
     
     BoxLayout:
+
         id : main_box
         orientation : 'vertical'
         size_hint : (1.5,1)
         canvas.before:
             Color:
-                rgb : (0.15,0.15,0.15)
+                rgb : (0.1,0.1,0.1)
             Rectangle:
                 size : self.size
                 pos : self.pos
@@ -23,29 +24,22 @@
         
         DeviceListBox:
             id : device_list
-            settingView: root
+            setting_view: root
             serverBox : server_box
-            # settingContentBox : setting_content_box
 
-        
 
-    #SettingContentBox:
-    #    id : setting_content_box
-    #    settingView: root
-    #    serverBox : server_box
-    #    deviceList : device_list
-    #    canvas.before:
-    #        Color:
-    #            rgb : (0.45,0.45,0.45)
-    #        Rectangle:
-    #            size : self.size
-    #            pos : self.pos
-
-<SettingPopup>:
-    
-    #server_setting: server_setting
-    #size_hint: (0.35, 0.35)
+<ServerSettingPopup>:
     size_hint: (None, 0.4)
     width: dp(350)
+    auto_dismiss : False
+
+<DeviceSettingPopup>:
+    size_hint: (None, 0.85)
+    width: dp(450)
+    auto_dismiss : False
+
+<DeviceAddPopup>:
+    size_hint: (None, 0.85)
+    width: dp(450)
     auto_dismiss : False
 

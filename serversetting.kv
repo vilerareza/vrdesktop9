@@ -4,6 +4,9 @@
     server_address_text: server_address_text
     btn_save: btn_save
     btn_cancel: btn_cancel
+    btn_test : btn_test
+    lbl_test : lbl_test
+    img_test : img_test
 
     TextInput:
         id: server_address_text
@@ -31,7 +34,6 @@
         size_hint: (0.8, None)
         height: dp(40)
 
-
     ImageButton:
         id : btn_cancel
         source: 'images/settingview/btn_cancel.png'
@@ -39,10 +41,9 @@
         right: server_address_text.right
         pos_hint: {'y': 0}
         size_hint: (None, None)
-        size: (dp(100), dp(40))
+        size: (dp(100), dp(35))
         on_press: root.button_press_callback(self)
         on_release: root.button_release_callback(self)
-
 
     ImageButton:
         id : btn_save
@@ -51,19 +52,39 @@
         right: btn_cancel.x - dp(20)
         pos_hint: {'y': 0}
         size_hint: (None, None)
-        size: (dp(100), dp(40))
+        size: (dp(100), dp(35))
         on_press: root.button_press_callback(self)
         on_release: root.button_release_callback(self)
-
 
     ImageButton:
         id : btn_test
         source: 'images/settingview/btn_test.png'
         fit_mode: 'contain'
-        right: server_address_text.right
         size_hint: (None, None)
-        size: (dp(120), dp(25))
-        x : server_address_text.x
+        size: (dp(110), dp(25))
+        x: server_address_text.x
         top : server_address_text.y - dp(15)
-        #on_press: root.button_press_callback(self)
-        #on_release: root.button_release_callback(self)
+        on_press: root.button_press_callback(self)
+        on_release: root.button_release_callback(self)
+
+    Image:
+        id : img_test
+        source: 'images/settingview/server_ok.png'
+        fit_mode: 'contain'
+        size_hint: (None, None)
+        size: (dp(20), dp(20))
+        x: btn_test.right + dp(10)
+        center_y : btn_test.center_y
+
+    Label:
+        id: lbl_test
+        text : root.str_lbl_test
+        text_size : self.size
+        font_size : dp(14)
+        font_family : 'arial'
+        halign : 'right' 
+        valign : 'middle'
+        right: server_address_text.right
+        center_y : btn_test.center_y
+        size_hint : (None, None)
+        size : (dp(120), dp(20))

@@ -8,19 +8,23 @@ from threading import Thread
 from kivy.lang import Builder
 from kivy.properties import ListProperty, ObjectProperty
 from kivy.uix.boxlayout import BoxLayout
+from mylayoutwidgets import ImageButton
 from kivy.clock import Clock
 
 from deviceitem import DeviceItem
 from devicelist import DeviceList
 from serverbox import ServerBox
+from serveritem import ServerItem
 from devicelistbox import DeviceListBox
-from settingcontentbox import SettingContentBox
+# from settingcontentbox import SettingContentBox
 from serversetting import ServerSetting
-from mylayoutwidgets import ImageButton
+from devicesetting import DeviceSetting
+from deviceadd import DeviceAdd
 
 from kivy.uix.popup import Popup
 
 Builder.load_file("settingview.kv")
+
 
 class SettingView(BoxLayout):
 
@@ -33,13 +37,20 @@ class SettingView(BoxLayout):
     lastConnDevFile = 'data/lastconnecteddev.p'
     isServerTimeout = False
     stopFlag = False
-    popupRequester = ObjectProperty(None)
+    popup_requester = ObjectProperty(None)
 
 
     def __init__(self, server_address_file='data/serveraddress.p', **kwargs):
         super(SettingView, self).__init__(**kwargs)
         # Getting the server adrress, deserialize the serveraddress.p
         self.serverAddressFile = server_address_file
+        # Server setting popup
+        self.server_setting_popup = ServerSettingPopup(caller=self)
+        # Device setting popup
+        self.device_setting_popup = DeviceSettingPopup(caller=self)
+        # Device add popup
+        self.device_add_popup = DeviceAddPopup(caller=self)
+
 
     def init_views(self, *args):
         '''Initialize the view of this class'''
@@ -49,8 +60,7 @@ class SettingView(BoxLayout):
         self.init_devices()
         # Start server status checker
         self.start_server_checker()
-        # Setting popup
-        self.setting_popup = SettingPopup(caller=self)
+
 
     def refresh_views(self):
         # Refresh the device list
@@ -114,6 +124,7 @@ class SettingView(BoxLayout):
                             stream_url = stream_url,
                             desc = desc,
                             enabled = enabled,
+                            setting_view = self
                             )
                         )
                 # Storing connected devices into the file
@@ -193,7 +204,8 @@ class SettingView(BoxLayout):
         except Exception as e:
             print (f'Saving last connected device failed: {e}')
 
-    def update_deviceitem(self, updated_device):
+
+    def update_device_item(self, updated_device):
         '''Update some device'''
         # Get current devices
         for device in self.devices:
@@ -203,7 +215,7 @@ class SettingView(BoxLayout):
                 device.stream_url = updated_device['stream_url']
                 device.desc = updated_device['desc']
                 device.enabled = updated_device['enabled']
-                self.settingContentBox.change_config(device)
+
 
     def button_press_callback(self, widget):
         if widget == self.ids.device_delete_button:
@@ -226,22 +238,59 @@ class SettingView(BoxLayout):
         '''Stopping the server checker thread'''
         print ('stoping')
         self.stopFlag = True
-        self.server_box.serverItem.stop_server_checker()
+        self.server_box.server_item.stop_server_checker()
+
 
     def open_popup(self, requester):
-        self.popupRequester = requester
-        self.setting_popup.title = 'Change Server...'
-        # Fill the popup with current server setting
-        self.setting_popup.server_setting.fill(self.server_box.server_item)
-        self.setting_popup.open()
+        # Open popup
+        if type(requester) == ServerItem:
+            # Server setting popup
+            self.popup_requester = requester
+            self.server_setting_popup.title = 'Change Server...'
+            ## Fill the popup with current server setting
+            self.server_setting_popup.server_setting.fill(requester)
+            self.server_setting_popup.open()
+        elif type(requester) == DeviceItem:
+            # Device setting popup
+            self.popup_requester = requester
+            self.device_setting_popup.title = 'Device Setting'
+            ## Fill the popup with current device setting
+            self.device_setting_popup.device_setting.fill(requester)
+            self.device_setting_popup.open()
+        elif type(requester) == DeviceListBox:
+            # Device add popup
+            self.popup_requester = requester
+            self.device_add_popup.title = 'Add Device'
+            ## Fill the popup with current device setting
+            self.device_add_popup.device_add.refresh()
+            self.device_add_popup.open()
 
 
-class SettingPopup(Popup):
+class ServerSettingPopup(Popup):
 
     server_setting = ObjectProperty(None)
 
     def __init__(self, caller, **kwargs):
-        super(SettingPopup, self).__init__(**kwargs)
+        super(ServerSettingPopup, self).__init__(**kwargs)
         self.server_setting = ServerSetting(caller=caller)
         self.add_widget(self.server_setting)
 
+
+class DeviceSettingPopup(Popup):
+
+    device_setting = ObjectProperty(None)
+
+    def __init__(self, caller, **kwargs):
+        super(DeviceSettingPopup, self).__init__(**kwargs)
+        self.device_setting = DeviceSetting(caller=caller)
+        self.add_widget(self.device_setting)
+
+
+class DeviceAddPopup(Popup):
+
+    device_add = ObjectProperty(None)
+
+    def __init__(self, caller, **kwargs):
+        super(DeviceAddPopup, self).__init__(**kwargs)
+        self.device_add = DeviceAdd(caller=caller)
+        self.add_widget(self.device_add)
