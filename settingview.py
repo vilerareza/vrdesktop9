@@ -70,6 +70,7 @@ class SettingView(BoxLayout):
         # Resetting the setting content box
         # self.settingContentBox.no_selection_config()
 
+
     def init_devices(self):
         '''Get devices from server and show it on the layout'''
         # Get the server IP from the file
@@ -81,6 +82,7 @@ class SettingView(BoxLayout):
             self.get_devices(server_address = server_address)
         else:
             print ('Unable to get server IP and server name. Nothing to init')
+
 
     def get_server_address(self):
         '''Deserialize server ip and server name from file'''
@@ -94,9 +96,11 @@ class SettingView(BoxLayout):
         finally:
             return server_address
 
+
     def get_devices(self, server_address):
+        
         print ('get devices')
-        '''Retrieve devices from server REST API'''
+        # Retrieve devices from server REST API
 
         def _send_request():
             '''Thread function'''
@@ -110,29 +114,32 @@ class SettingView(BoxLayout):
         def callback(isSuccess, r, *args):
             if isSuccess:
                 devices_response = r.json()  # Produce list of dict
-                for device in devices_response:
-                    device_id = device['id']
-                    name = device['name']
-                    stream_url = device['stream_url']
-                    desc = device['desc']
-                    enabled = device['enabled']
+                for device_response in devices_response:
+                    device_id = device_response['id']
+                    name = device_response['name']
+                    stream_url = device_response['stream_url']
+                    desc = device_response['desc']
+                    enabled = device_response['enabled']
                     # Appending received devices to devices property
-                    self.devices.append(
-                        DeviceItem(
-                            device_id = device_id,
-                            name = name,
-                            stream_url = stream_url,
-                            desc = desc,
-                            enabled = enabled,
-                            setting_view = self
-                            )
-                        )
+                    device =  DeviceItem(device_id = device_id,
+                                         name = name,
+                                         stream_url = stream_url,
+                                         desc = desc,
+                                         enabled = enabled,
+                                         setting_view = self)
+                    self.devices.append(device)
                 # Storing connected devices into the file
                 self.store_connected_device(deviceJSON = devices_response)
                 # Display devices
                 self.populate_items_to_list(self.devices)
                 # Dismissing popup message
                 self.manager.popup.dismiss()
+                
+                # Initiate device checker in new thread
+                t_device_check = Thread(target = self.start_devices_checker)
+                t_device_check.daemon = True
+                t_device_check.start()
+
             else:
                 if self.stopFlag:
                     # Triggered by cancellation
@@ -151,6 +158,7 @@ class SettingView(BoxLayout):
         t = Thread(target = _send_request)
         t.daemon = True
         t.start()
+
 
     def send_request(self, server_address, port, url, timeout = 3):
         '''Send request using server_ip, if it fails try again using server_name'''
@@ -178,14 +186,26 @@ class SettingView(BoxLayout):
                     break
             return False, None
 
+
     def populate_items_to_list(self, devices):
         '''Populate items to a list widget'''
         for device in devices:
             self.deviceList.deviceListLayout.add_widget(device)
 
+
     def start_server_checker(self):
         '''Start the server checker thread'''
         self.server_box.server_item.start_server_checker()
+
+
+    def start_devices_checker(self):
+        '''Start the device checker threads'''
+        try:
+            for device in self.devices:
+                device.start_device_checker()
+        except:
+            print ('Device to start the thread')
+
 
     def update_server_addr(self, server_ip = '', server_name = ''):
         '''Serialize server ip and server name to file'''
@@ -196,6 +216,7 @@ class SettingView(BoxLayout):
         except Exception as e:
             print (f'Saving server address failed: {e}')
 
+
     def store_connected_device(self, deviceJSON):
         '''Serialize connected devices address to file'''
         try:
@@ -205,25 +226,15 @@ class SettingView(BoxLayout):
             print (f'Saving last connected device failed: {e}')
 
 
-    def update_device_item(self, updated_device):
-        '''Update some device'''
-        # Get current devices
-        for device in self.devices:
-            if device.device_id == updated_device['id']:
-                # Update the device property except its hostname (not changeable)
-                device.name = updated_device['name']
-                device.stream_url = updated_device['stream_url']
-                device.desc = updated_device['desc']
-                device.enabled = updated_device['enabled']
-
-
     def button_press_callback(self, widget):
         if widget == self.ids.device_delete_button:
             widget.source = "images/settingview/delete_device_down.png"
 
+
     def button_release_callback(self, widget):
         if widget == self.ids.device_delete_button:
             widget.source = "images/settingview/delete_device_normal.png"
+
 
     def popup_button_callback(self, popup):
         # Callback function for manager popup button
@@ -233,12 +244,19 @@ class SettingView(BoxLayout):
         else:
             popup.dismiss()
             self.isServerTimeout = False
-        
+
+
     def stop(self):
-        '''Stopping the server checker thread'''
         print ('stoping')
         self.stopFlag = True
+        # Stopping the server checker thread
         self.server_box.server_item.stop_server_checker()
+        # Stopping device checker threads
+        try:
+            for device in self.devices:
+                device.stop_checker()
+        except:
+            print ('Device to stop the thread from')
 
 
     def open_popup(self, requester):

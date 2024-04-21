@@ -5,7 +5,6 @@
     btn_server_change : btn_server_change
     lbl_address : lbl_address
 
-
     FitImage:
         id : server_image
         pos_hint : {'center_x':0.5, 'center_y': 0.5}
@@ -13,30 +12,6 @@
         source : 'images/settingview/server_item.png'
         fit_mode: 'fill'
         radius: 15, 15, 15, 15
-        canvas.before:
-            Color:
-                rgb : (0.15,0.4,0.15)
-            Rectangle:
-                size : self.size
-                pos : self.pos
-
-    #Label:
-    #    id: lbl_server
-    #    text: 'Server: '
-    #    size_hint : (0.3, 0.5)
-    #    text_size : self.size
-    #    halign : 'left'
-    #    valign : 'middle'
-    #    font_size: dp(17)
-    #    font_family: "arial"
-    #    pos_hint: {'x': 0.01, 'center_y': 0.6 }
-        
-    #    canvas.before:
-    #        Color:
-    #            rgb : (0.15,0.2,0.3)
-    #        Rectangle:
-    #            size : self.size
-    #            pos : self.pos
 
     Label:
         id : lbl_address
@@ -50,13 +25,6 @@
         font_size : dp(28)
         font_family : "arial"
         pos_hint: {'x': 0.03, 'center_y': 0.6 }
-        
-        #canvas.before:
-        #    Color:
-        #        rgb : (0.15,0.7,0.3)
-        #    Rectangle:
-        #        size : self.size
-        #        pos : self.pos
 
     Image:
         id : img_status
@@ -81,17 +49,17 @@
         x : img_status.right + dp(10)
         y : img_status.y
 
-
     ImageButton:
         id : btn_server_change
         source: 'images/settingview/btn_chg_server.png'
         pos_hint: {'right': 0.95, 'center_y':0.5}
-        # size_hint: (0.1, 0.3)
         size_hint: (None, None)
         size: (dp(120), dp(35))
         on_press : root.button_press_callback(self)
         on_release : root.button_release_callback(self)
         fit_mode: 'contain'
+        
+        
         #canvas.before:
         #    Color:
         #        rgb : (0.15,0.9,0.3)

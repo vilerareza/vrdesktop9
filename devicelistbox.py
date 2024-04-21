@@ -26,4 +26,4 @@ class DeviceListBox(BoxLayout):
             self.setting_view.open_popup(self)
         elif button == self.btnRefresh:
             button.source = 'images/settingview/btn_refresh.png'
-            self.settingView.init_views()
+            self.setting_view.init_views()

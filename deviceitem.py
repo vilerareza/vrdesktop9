@@ -2,13 +2,19 @@ import pickle
 import requests
 import socket
 import time
+from functools import partial
+from threading import Thread, Condition
 
 from kivy.lang import Builder
 from kivy.graphics import Color, Rectangle
+from kivy.graphics.texture import Texture
 from kivy.properties import NumericProperty, ObjectProperty, StringProperty, BooleanProperty
 from kivy.uix.floatlayout import FloatLayout
+from kivy.clock import Clock
 from mylayoutwidgets import ColorLabel
 from mylayoutwidgets import ImageButton
+
+import cv2 as cv
 
 Builder.load_file("deviceitem.kv")
 
@@ -17,25 +23,30 @@ class DeviceItem(FloatLayout):
 
     setting_view = ObjectProperty(None)
     device_id = NumericProperty(0)
-    name = StringProperty("")
-    stream_url = ''
-    desc = ''
+    display_name = StringProperty("")
+    stream_url = StringProperty("")
+    desc = StringProperty("")
     enabled = BooleanProperty(True)
-    image = ObjectProperty(None)
-    label = ObjectProperty(None)
+    bg_img = ObjectProperty(None)
+    img_icon = ObjectProperty(None)
+    lbl_name = ObjectProperty(None)
     btn_edit = ObjectProperty(None)
     btn_delete = ObjectProperty(None)
+    stop_flag = False
+    is_check_running = False
     
-    imagePath = "images/settingview/device_item.png"
+    # bg_img_path = "images/settingview/device_item.png"
 
     def __init__(self, 
                  device_id, 
                  name, 
-                 stream_url, 
+                 stream_url,
                  desc, 
                  enabled,
                  server_address_file='data/serveraddress.p',
                  server_port = 8000, 
+                 t_check = 5,
+                 icon_flip = True,
                  **kwargs):
         
         super().__init__(**kwargs)
@@ -47,6 +58,12 @@ class DeviceItem(FloatLayout):
         self.enabled = enabled
         self.server_address_file = server_address_file
         self.server_port = server_port
+        if len(name) > 12:
+            self.display_name = f'{name[:12]}...'
+        else:
+            self.display_name = name
+        self.t_check = t_check
+        self.icon_flip = icon_flip
 
 
     def get_server_address(self):
@@ -62,7 +79,22 @@ class DeviceItem(FloatLayout):
             return server_address
 
 
-    def delete_device(self, delete_api = 'api/device' ):
+    def update_device(self, updated_device_data):
+        self.name = updated_device_data['name']
+        self.stream_url = updated_device_data['stream_url']
+        self.desc = updated_device_data['desc']
+        self.enabled = updated_device_data['enabled']
+        if len(self.name) > 12:
+            self.display_name = f'{self.name[:12]}...'
+        else:
+            self.display_name = self.name
+        # Restart the device checker in new thread
+        t_device_check = Thread(target = self.restart_checker)
+        t_device_check.daemon = True
+        t_device_check.start()
+
+
+    def delete_device(self, delete_api = 'api/device'):
         try:
             server_address = self.get_server_address()
             isSuccess, r = self.send_request('delete', 
@@ -72,6 +104,8 @@ class DeviceItem(FloatLayout):
                                              None, 
                                              5)
             if isSuccess:
+                # Stop this device
+                self.stop_flag = True
                 print (f'Status code: {r.status_code}')
                 # Refresh the device list.
                 self.setting_view.init_views()
@@ -125,6 +159,99 @@ class DeviceItem(FloatLayout):
                     continue
             return False, None
 
+
+    def start_device_checker(self):
+ 
+        print ('START CHECKER')
+
+        # Start the status checker thread
+        self.stop_flag=False
+        # video capture timeout watcher
+        timeout_watcher = Condition()
+        #frame_w = 640
+        #frame_h = 480
+        #self.img_icon.texture = Texture.create(size=self.img_icon.size, colorfmt="rgb")
+        self.img_icon.texture = Texture.create(size=(1280, 960), colorfmt="rgb")
+        
+        # Update the livestream texture with new frame
+        def update_frame(buff, *largs):
+            data = buff.flatten()
+            self.img_icon.texture.blit_buffer(data, bufferfmt="ubyte", colorfmt="rgb")
+            self.img_icon.canvas.ask_update()
+
+        # Update the livestream texture with new frame
+        def on_frame_(img_array):
+            Clock.schedule_once(partial(update_frame, img_array), 0)
+
+        def callback_ok(*args):
+            print ('Device OK')
+            on_frame_(args[0])
+        
+        def callback_fail(*args):
+            print ('Device Not Found')
+
+        def check():
+            # Delay before start
+            # time.sleep(self.t_check)
+
+            # create video capture object
+            # Evaluate the stream_url
+            try:
+                # Stream url is integer
+                stream_url = eval(self.stream_url)
+            except:
+                # Stream url is sring
+                stream_url = self.stream_url
+            
+            stream_capture = cv.VideoCapture(stream_url)
+            
+            # Capture object created. Notify the watcher
+            with timeout_watcher:
+                timeout_watcher.notify_all()
+            
+            while (not self.stop_flag):
+                # Frame capture loop
+
+                is_success, frame = stream_capture.read()
+
+                if is_success:
+                    ## Frame processing
+                    if self.icon_flip:
+                        frame = cv.flip(frame,0)
+                    frame = frame[:,:,::-1]
+                    # frame = cv.resize(frame, (int(self.img_icon.size[0]), int(self.img_icon.size[0])))
+                    frame = cv.resize(frame, (1280, 960))
+                    Clock.schedule_once(partial(callback_ok, frame), 0)
+
+                else:
+                    ## Connection failed
+                    Clock.schedule_once(callback_fail, 0)
+
+                ## Delay between check
+                time.sleep(self.t_check)
+
+        # Starting the server checker thread
+        t = Thread(target = check)
+        t.daemon = True
+        t.start()
+        # Monitor the video capture creation timeout
+        with timeout_watcher:
+            if not (timeout_watcher.wait(timeout = 10)):
+                print ('timeout')
+
+
+    def stop_checker(self):
+        # The checker will be stop at max self.t_check
+        self.stop_flag=True
+
+
+    def restart_checker(self):
+        self.stop_checker()
+        # Put some delay before starting again to make sure the existing thread stop first.
+        time.sleep(self.t_check)
+        # Re-iitiate device checker in new thread (so that any open popup can just dismiss immediately).
+        self.start_device_checker()
+        
 
     def button_press_callback(self, button):
         if button == self.btn_edit:

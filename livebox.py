@@ -90,6 +90,7 @@ class LiveBox(MDFloatLayout, HoverBehavior):
         with self.condition:
             self.condition.notify_all()
 
+
     def on_frame_(self, wsapp, message):
         ### When frame data is received form server
         #### Create the CoreImage object

@@ -2,12 +2,15 @@ import requests
 import socket
 import pickle
 import time
+from functools import partial
+from threading import Thread
 
 from kivy.lang import Builder
 from kivy.properties import ObjectProperty, BooleanProperty
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from mylayoutwidgets import ImageButton, ImageToggle
+from kivy.clock import Clock
 
 Builder.load_file("devicesetting.kv")
 
@@ -36,36 +39,44 @@ class DeviceSetting(FloatLayout):
 
     def save_device_to_db(self, *args):
 
-        # User pressed "Save". Save attribute to selected device
-        device_id = self.device_item.device_id
-        device_name = self.txt_name.text
-        stream_url = self.txt_stream_url.text
-        device_desc = self.txt_desc.text
-        device_enabled = self.sw_enable.active
-        deviceData = {'name': device_name,
-                      'stream_url': stream_url, 
-                      'desc': device_desc, 
-                      'enabled' : device_enabled,
-                      'prev_name': self.prev_device_name}
-        server_address = self.get_server_address()
-        is_success, r = self.send_request('put', 
-                                          server_address,
-                                          8000, 
-                                          f'api/device/{device_id}/',
-                                          deviceData, 
-                                          5)
+        def _send_request():
+            # User pressed "Save". Save attribute to selected device
+            device_id = self.device_item.device_id
+            device_name = self.txt_name.text
+            stream_url = self.txt_stream_url.text
+            device_desc = self.txt_desc.text
+            device_enabled = self.sw_enable.active
+            deviceData = {'name': device_name,
+                        'stream_url': stream_url, 
+                        'desc': device_desc, 
+                        'enabled' : device_enabled,
+                        'prev_name': self.prev_device_name}
+            server_address = self.get_server_address()
+            is_success, r = self.send_request('put', 
+                                            server_address,
+                                            8000, 
+                                            f'api/device/{device_id}/',
+                                            deviceData, 
+                                            5)
+            print (r.status_code)
+            # Sending request complete. Run callback function
+            Clock.schedule_once(partial(callback, is_success, r, server_address, device_id), 0)
+
+        def callback(is_success, r, server_address, device_id, *args):
+            if is_success and r.status_code == 200:
+                # Update success
+                ## Get the new device attribute (json) form the sever
+                updated_device_data = self.get_device_data(server_address, device_id)
+                if updated_device_data != {}:
+                    self.device_item.update_device(updated_device_data)
+            else:
+                # Update failed. Most likely due to device name is already exist. Highlight the device name text input
+                self.txt_name.background_color = (0.9, 0.7, 0.7)
         
-        print (r.status_code)
-        if is_success and r.status_code == 200:
-            # Get the new device attribute (json) form the sever
-            new_device = self.get_device_detail(server_address, device_id)
-            # Update the current deviceitem
-            self.caller.update_device_item(new_device)
-            return True
-        else:
-            ## Most likely due to device name is already exist. Highlight the device name text input
-            self.txt_name.background_color = (0.9, 0.7, 0.7)
-            return False
+        # Starting the new thread
+        t = Thread(target = _send_request)
+        t.daemon = True
+        t.start()
 
 
     def validate_entry(self, *args):
@@ -79,7 +90,7 @@ class DeviceSetting(FloatLayout):
         return isValid
 
 
-    def get_device_detail(self, server_address, device_id):
+    def get_device_data(self, server_address, device_id):
         '''Get device with specific device ID from server REST API'''
         try:
             _, r = self.send_request('get', server_address, 8000, f'api/device/{device_id}/', None, 5)
@@ -209,9 +220,10 @@ class DeviceSetting(FloatLayout):
         if button == self.btn_save:
             button.source = 'images/settingview/btn_save_server.png'
             if self.validate_entry(self.txt_name, self.txt_stream_url):
-                if self.save_device_to_db():
-                    # Dismissing popup
-                    self.caller.device_setting_popup.dismiss()
+                self.save_device_to_db()
+                # Dismissing popup
+                #Clock.schedule_once((self.caller.device_setting_popup.dismiss), 0)
+                self.caller.device_setting_popup.dismiss()
             
         elif button == self.btn_cancel:
             button.source =  'images/settingview/btn_cancel.png'
