@@ -9,6 +9,7 @@
     btn_add: btn_add
     btn_cancel: btn_cancel
     sw_enable : sw_enable
+    sw_flip : sw_flip
 
     TextInput:
         id: txt_name
@@ -42,6 +43,14 @@
         right : txt_name.right
         y: lbl_name.top + dp (15)
         active: True
+
+    Switch:
+        id: sw_flip
+        size_hint : (None, None)
+        size : (dp(80), dp(30))
+        right : sw_enable.x - dp(30)
+        y: sw_enable.y
+        active: False
 
     Label:
         id: lbl_stream_url

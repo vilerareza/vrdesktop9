@@ -26,6 +26,7 @@ class DeviceSetting(FloatLayout):
     btn_save = ObjectProperty(None)
     btn_cancel = ObjectProperty(None)
     sw_enable = ObjectProperty(None)
+    sw_flip = ObjectProperty(None)
 
 
     def __init__(self, caller,
@@ -46,11 +47,13 @@ class DeviceSetting(FloatLayout):
             stream_url = self.txt_stream_url.text
             device_desc = self.txt_desc.text
             device_enabled = self.sw_enable.active
+            device_flip = self.sw_flip.active
             deviceData = {'name': device_name,
                         'stream_url': stream_url, 
                         'desc': device_desc, 
                         'enabled' : device_enabled,
-                        'prev_name': self.prev_device_name}
+                        'prev_name': self.prev_device_name,
+                        'flip': device_flip}
             server_address = self.get_server_address()
             is_success, r = self.send_request('put', 
                                             server_address,
@@ -190,6 +193,7 @@ class DeviceSetting(FloatLayout):
         self.txt_stream_url.text = device_item.stream_url
         self.txt_desc.text = device_item.desc
         self.sw_enable.active = device_item.enabled
+        self.sw_flip.active = device_item.flip
         ## Save the current name as previous name (for the server to determine if the name has changed)
         self.prev_device_name = device_item.name
 

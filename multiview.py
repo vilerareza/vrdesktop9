@@ -9,6 +9,7 @@ from kivy.lang import Builder
 from kivy.properties import ListProperty, ObjectProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
+from kivy.metrics import dp
 
 from deviceicon import DeviceIcon
 from livebox import LiveBox
@@ -18,6 +19,7 @@ from livegridlayout import LiveGridLayout
 Builder.load_file("multiview.kv")
 
 class MultiView(BoxLayout):
+
     # Grid layout for live stream
     liveGrid = ObjectProperty(None)
     # Layout for device selection to stream
@@ -41,52 +43,54 @@ class MultiView(BoxLayout):
     isServerTimeout = False
     stopFlag = False
 
+
     def __init__(self, server_address_file='data/serveraddress.p', **kwargs):
         super().__init__(**kwargs)
         # Getting the server adrress, deserialize the serveraddress.p
         self.serverAddressFile = server_address_file
         #self.liveGrid.bind(size = self.adjust_livebox_size)
 
+
     def init_views(self, *args):
         '''Initialize the view of this class'''
+        self.init_devices()
+            
+    
+    def init_devices(self):
+        '''Get devices from server and show it on the layout'''
         # Get the server IP from the file
-        serverIP, serverName = self.get_server_address()
-        if serverIP:
+        server_address = self.get_server_address()
+        if server_address:
             # Show popup message
             self.manager.open_popup(self)
             # Get devices from the server - perform in new thread
-            self.get_devices(serverIP, serverName)
+            self.get_devices(server_address = server_address)
         else:
             print ('Unable to get server IP and server name. Nothing to init')
-            
+    
+
     def get_server_address(self):
         '''Deserialize server ip and server name from file'''
-        serverIP = ''
-        serverName = ''
+        server_address = ''
         try:
             # Load the server hostname:port from file
             with open(self.serverAddressFile, 'rb') as file:
-                serverAddress = pickle.load(file)
-            serverIP = serverAddress[0]
-            serverName = serverAddress[1]
-            print (serverAddress)
+                server_address = pickle.load(file)
         except Exception as e:
             print(f'{e}: Failed loading server address from file: {e}')
         finally:
-            # Setting the class property
-            self.serverName = [serverIP, serverName]
-            return serverIP, serverName
+            return server_address
 
-    def get_devices(self, server_ip, server_name):
-        print ('get devices')
+
+    def get_devices(self, server_address):
         '''Retrieve devices from server REST API'''
 
         def _send_request():
             '''Thread function'''
             # Resetting the stop flag
             self.stopFlag = False
-            # Retrieve devices from server REST API
-            isSuccess, r = self.send_request(server_ip, server_name, 8000, 'api/device/', 5)
+            # Send request to the server
+            isSuccess, r = self.send_request(server_address, 8000, 'api/device/', 5)
             # Sending request complete. Run callback function
             Clock.schedule_once(partial(callback, isSuccess, r), 0)
 
@@ -135,19 +139,22 @@ class MultiView(BoxLayout):
             for icon in device_icons:
                 container.add_widget(icon)
 
+        # Create device icons
         try:
             for device in devices:
                 device_name = device ['name']
                 stream_url = device['stream_url']
                 device_enabled = device['enabled']
+                device_flip = device['flip']
 
                 # Fill device icon list
                 self.deviceIcons.append(DeviceIcon(
                     device_name = device_name,
                     stream_url = stream_url,
                     device_enabled = device_enabled,
+                    device_flip = device_flip,
                     size_hint = (None, None),
-                    size = (181, 45)
+                    size = (dp(181), dp(45))
                     )
                 )
 
@@ -157,7 +164,8 @@ class MultiView(BoxLayout):
                     )
                 )
             # Add deviceIcon content to selection box
-            add_deviceicons_to_selectionbox(device_icons = self.deviceIcons,container = self.selectionBox)
+            add_deviceicons_to_selectionbox(device_icons = self.deviceIcons,
+                                            container = self.selectionBox)
             return True
         
         except Exception as e:
@@ -175,11 +183,11 @@ class MultiView(BoxLayout):
                 deviceIcon.bind(on_touch_down=self.icon_touch_action)
 
 
-    def send_request(self, server_ip, server_name, port, url, timeout = 3):
+    def send_request(self, server_name, port, url, timeout = 3):
         '''Send request using server_ip, if it fails try again using server_name'''
         try:
             # Try connecting using IP
-            r = requests.get(f'http://{server_ip}:{port}/{url}', timeout = timeout)
+            r = requests.get(f'http://{server_name}:{port}/{url}', timeout = timeout)
             return True, r
         except:
             # Server IP maybe already changed. Try to find the new IP using server_name           
@@ -200,6 +208,7 @@ class MultiView(BoxLayout):
                 else:
                     break
             return False, None
+
 
     def update_server_addr(self, server_ip = '', server_name = ''):
         '''Serialize server ip and server name to file'''

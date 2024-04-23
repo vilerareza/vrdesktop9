@@ -15,6 +15,7 @@ class DeviceIcon(ButtonBehavior, FloatLayout):
     device_name = StringProperty("")
     stream_url = StringProperty("")
     device_enabled = BooleanProperty(True)
+    device_flip = BooleanProperty(True)
 
     statusImage = ObjectProperty(None)
     deviceLabel = ObjectProperty(None)
@@ -29,12 +30,14 @@ class DeviceIcon(ButtonBehavior, FloatLayout):
                  device_name, 
                  stream_url,
                  device_enabled,
+                 device_flip,
                  **kwargs):
         super().__init__(**kwargs)
         
         self.device_name = device_name
         self.stream_url = stream_url
         self.device_enabled = device_enabled
+        self.device_flip = device_flip
         self.disabled = True
 
 
@@ -79,6 +82,7 @@ class DeviceIcon(ButtonBehavior, FloatLayout):
         t_get_device_ip = threading.Thread(target = _ping_device)
         t_get_device_ip.daemon = True
         t_get_device_ip.start()
+
 
     def stop(self):
         self.stop_flag=True

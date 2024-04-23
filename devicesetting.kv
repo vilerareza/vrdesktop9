@@ -7,6 +7,7 @@
     lbl_desc: lbl_desc
     txt_desc: txt_desc
     sw_enable: sw_enable
+    sw_flip : sw_flip
     btn_save : btn_save
     btn_cancel : btn_cancel
 
@@ -42,6 +43,14 @@
         right : txt_name.right
         y: lbl_name.top + dp (15)
         active: True
+
+    Switch:
+        id: sw_flip
+        size_hint : (None, None)
+        size : (dp(80), dp(30))
+        right : sw_enable.x - dp(30)
+        y: sw_enable.y
+        active: False
 
     Label:
         id: lbl_stream_url

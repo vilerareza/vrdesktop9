@@ -23,18 +23,16 @@ class DeviceAdd(FloatLayout):
     btn_add = ObjectProperty(None)
     btn_cancel = ObjectProperty(None)
     sw_enable = ObjectProperty(None)
-
+    sw_flip = ObjectProperty(None)
 
     def __init__(self, 
                  caller,
-                 server_address_file='data/serveraddress.p', 
-                 qr_save_dir ='images/temp/qr/', 
+                 server_address_file='data/serveraddress.p',
                  **kwargs):
         super().__init__(**kwargs)
         # Getting the server adrress
         self.caller = caller
         self.server_address_file = server_address_file
-        self.qrSaveDir = qr_save_dir
 
 
     def add_new_device(self):
@@ -44,6 +42,7 @@ class DeviceAdd(FloatLayout):
         stream_url = self.txt_stream_url.text
         device_desc = self.txt_desc.text
         device_enabled = self.sw_enable.active
+        device_flip = self.sw_flip.active
         ## Get the server IP from the file
         server_address = self.get_server_address()
         ## Create device object in the server'''
@@ -51,7 +50,8 @@ class DeviceAdd(FloatLayout):
                                     device_name, 
                                     stream_url, 
                                     device_desc,
-                                    device_enabled)
+                                    device_enabled,
+                                    device_flip)
         if not is_success:
             ## Most likely due to device name is already exist. Highlight the device name text input
             self.txt_name.background_color = (0.9, 0.7, 0.7)
@@ -75,12 +75,14 @@ class DeviceAdd(FloatLayout):
                    device_name,
                    stream_url, 
                    device_desc,
-                   device_enabled):
+                   device_enabled,
+                   device_flip):
         
         request_data = {'name': device_name, 
                        'stream_url': stream_url, 
                        'desc': device_desc,
-                       'enabled': device_enabled
+                       'enabled': device_enabled,
+                       'flip': device_flip
                        }
         
         print ('Server Address', server_address)

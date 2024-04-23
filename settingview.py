@@ -16,7 +16,6 @@ from devicelist import DeviceList
 from serverbox import ServerBox
 from serveritem import ServerItem
 from devicelistbox import DeviceListBox
-# from settingcontentbox import SettingContentBox
 from serversetting import ServerSetting
 from devicesetting import DeviceSetting
 from deviceadd import DeviceAdd
@@ -36,7 +35,7 @@ class SettingView(BoxLayout):
     settingContentBox = ObjectProperty(None)
     lastConnDevFile = 'data/lastconnecteddev.p'
     isServerTimeout = False
-    stopFlag = False
+    stop_flag = False
     popup_requester = ObjectProperty(None)
 
 
@@ -67,8 +66,6 @@ class SettingView(BoxLayout):
         self.devices.clear()
         # Clear device list widgets
         self.deviceList.deviceListLayout.clear_widgets()
-        # Resetting the setting content box
-        # self.settingContentBox.no_selection_config()
 
 
     def init_devices(self):
@@ -105,7 +102,7 @@ class SettingView(BoxLayout):
         def _send_request():
             '''Thread function'''
             # Resetting the stop flag
-            self.stopFlag = False
+            self.stop_flag = False
             # Send request to the server
             isSuccess, r = self.send_request(server_address, 8000, 'api/device/', 5)
             # Sending request complete. Run callback function
@@ -120,12 +117,14 @@ class SettingView(BoxLayout):
                     stream_url = device_response['stream_url']
                     desc = device_response['desc']
                     enabled = device_response['enabled']
+                    flip = device_response['flip']
                     # Appending received devices to devices property
                     device =  DeviceItem(device_id = device_id,
                                          name = name,
                                          stream_url = stream_url,
                                          desc = desc,
                                          enabled = enabled,
+                                         flip = flip,
                                          setting_view = self)
                     self.devices.append(device)
                 # Storing connected devices into the file
@@ -141,12 +140,12 @@ class SettingView(BoxLayout):
                 t_device_check.start()
 
             else:
-                if self.stopFlag:
+                if self.stop_flag:
                     # Triggered by cancellation
                     # Dismissing popup message
                     self.manager.popup.dismiss()
                     # Clearing stop flag
-                    self.stopFlag = False
+                    self.stop_flag = False
                 else:
                     # Timeout. Prompting user to acknowledge
                     self.isServerTimeout = True
@@ -169,7 +168,7 @@ class SettingView(BoxLayout):
         except:
             # Server IP maybe already changed. Try to find the new IP using server_name           
             for i in range(3):
-                if not self.stopFlag:
+                if not self.stop_flag:
                     try:
                         # Try to get new IP
                         newIP = socket.gethostbyname(server_address)
@@ -200,11 +199,14 @@ class SettingView(BoxLayout):
 
     def start_devices_checker(self):
         '''Start the device checker threads'''
-        try:
-            for device in self.devices:
-                device.start_device_checker()
-        except:
-            print ('Device to start the thread')
+        #try:
+        for device in self.devices:
+            if self.stop_flag:
+                # Stop starting device if the view is interrupted
+                break
+            device.start_device_checker()
+        #except:
+        #    print ('Device to start the thread')
 
 
     def update_server_addr(self, server_ip = '', server_name = ''):
@@ -240,7 +242,7 @@ class SettingView(BoxLayout):
         # Callback function for manager popup button
         if not self.isServerTimeout:
             popup.title = 'Cancelling...'
-            self.stopFlag = True
+            self.stop_flag = True
         else:
             popup.dismiss()
             self.isServerTimeout = False
@@ -248,7 +250,7 @@ class SettingView(BoxLayout):
 
     def stop(self):
         print ('stoping')
-        self.stopFlag = True
+        self.stop_flag = True
         # Stopping the server checker thread
         self.server_box.server_item.stop_server_checker()
         # Stopping device checker threads

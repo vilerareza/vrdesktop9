@@ -6,7 +6,6 @@ from functools import partial
 from threading import Thread, Condition
 
 from kivy.lang import Builder
-from kivy.graphics import Color, Rectangle
 from kivy.graphics.texture import Texture
 from kivy.properties import NumericProperty, ObjectProperty, StringProperty, BooleanProperty
 from kivy.uix.floatlayout import FloatLayout
@@ -15,6 +14,7 @@ from mylayoutwidgets import ColorLabel
 from mylayoutwidgets import ImageButton
 
 import cv2 as cv
+from videocapture import VideoCapture
 
 Builder.load_file("deviceitem.kv")
 
@@ -27,6 +27,7 @@ class DeviceItem(FloatLayout):
     stream_url = StringProperty("")
     desc = StringProperty("")
     enabled = BooleanProperty(True)
+    flip = BooleanProperty(False)
     bg_img = ObjectProperty(None)
     img_icon = ObjectProperty(None)
     lbl_name = ObjectProperty(None)
@@ -34,6 +35,7 @@ class DeviceItem(FloatLayout):
     btn_delete = ObjectProperty(None)
     stop_flag = False
     is_check_running = False
+    stream_capture = None
     
     # bg_img_path = "images/settingview/device_item.png"
 
@@ -43,10 +45,10 @@ class DeviceItem(FloatLayout):
                  stream_url,
                  desc, 
                  enabled,
+                 flip,
                  server_address_file='data/serveraddress.p',
                  server_port = 8000, 
                  t_check = 5,
-                 icon_flip = True,
                  **kwargs):
         
         super().__init__(**kwargs)
@@ -56,6 +58,7 @@ class DeviceItem(FloatLayout):
         self.stream_url = stream_url
         self.desc = desc
         self.enabled = enabled
+        self.flip = flip
         self.server_address_file = server_address_file
         self.server_port = server_port
         if len(name) > 12:
@@ -63,7 +66,6 @@ class DeviceItem(FloatLayout):
         else:
             self.display_name = name
         self.t_check = t_check
-        self.icon_flip = icon_flip
 
 
     def get_server_address(self):
@@ -84,6 +86,7 @@ class DeviceItem(FloatLayout):
         self.stream_url = updated_device_data['stream_url']
         self.desc = updated_device_data['desc']
         self.enabled = updated_device_data['enabled']
+        self.flip = updated_device_data['flip']
         if len(self.name) > 12:
             self.display_name = f'{self.name[:12]}...'
         else:
@@ -161,17 +164,15 @@ class DeviceItem(FloatLayout):
 
 
     def start_device_checker(self):
- 
-        print ('START CHECKER')
 
         # Start the status checker thread
         self.stop_flag=False
         # video capture timeout watcher
         timeout_watcher = Condition()
-        #frame_w = 640
-        #frame_h = 480
-        #self.img_icon.texture = Texture.create(size=self.img_icon.size, colorfmt="rgb")
-        self.img_icon.texture = Texture.create(size=(1280, 960), colorfmt="rgb")
+        # Initial texture creation
+        ## Initiate frame_size with size of img_icon widget
+        self.frame_size = [int(self.img_icon.size[0]), int(self.img_icon.size[1])]
+        self.img_icon.texture = Texture.create(size=self.frame_size, colorfmt="rgb")
         
         # Update the livestream texture with new frame
         def update_frame(buff, *largs):
@@ -188,13 +189,10 @@ class DeviceItem(FloatLayout):
             on_frame_(args[0])
         
         def callback_fail(*args):
-            print ('Device Not Found')
+            print ('Fail to get frame')
 
         def check():
-            # Delay before start
-            # time.sleep(self.t_check)
-
-            # create video capture object
+        
             # Evaluate the stream_url
             try:
                 # Stream url is integer
@@ -203,7 +201,8 @@ class DeviceItem(FloatLayout):
                 # Stream url is sring
                 stream_url = self.stream_url
             
-            stream_capture = cv.VideoCapture(stream_url)
+            # Create video capture object
+            self.stream_capture = VideoCapture(stream_url)
             
             # Capture object created. Notify the watcher
             with timeout_watcher:
@@ -212,15 +211,22 @@ class DeviceItem(FloatLayout):
             while (not self.stop_flag):
                 # Frame capture loop
 
-                is_success, frame = stream_capture.read()
+                is_success, frame = self.stream_capture.read()
 
                 if is_success:
+                    
+                    # Compare the received frame size with current texture. If different, adjust the size of the texture
+                    if (frame.shape[1], frame.shape[0]) != (self.frame_size[0], self.frame_size[1]):
+                        self.img_icon.texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt="rgb")
+                        # Remember the frame size
+                        self.frame_size[0] = frame.shape[1]
+                        self.frame_size[1] = frame.shape[0]
+
                     ## Frame processing
-                    if self.icon_flip:
+                    if not self.flip:
+                        ### flip logic is reversed. MAybe due to the texture.
                         frame = cv.flip(frame,0)
                     frame = frame[:,:,::-1]
-                    # frame = cv.resize(frame, (int(self.img_icon.size[0]), int(self.img_icon.size[0])))
-                    frame = cv.resize(frame, (1280, 960))
                     Clock.schedule_once(partial(callback_ok, frame), 0)
 
                 else:
@@ -230,13 +236,21 @@ class DeviceItem(FloatLayout):
                 ## Delay between check
                 time.sleep(self.t_check)
 
+            ## Loop ended. Stop the stream capture object
+            self.stream_capture.stop_flag = True
+            self.stream_capture = None
+            print ('Done', self.stream_url)
+
         # Starting the server checker thread
         t = Thread(target = check)
         t.daemon = True
         t.start()
+        
         # Monitor the video capture creation timeout
         with timeout_watcher:
             if not (timeout_watcher.wait(timeout = 10)):
+                # Dont retrieve any frame
+                self.stop_checker()
                 print ('timeout')
 
 
@@ -249,7 +263,7 @@ class DeviceItem(FloatLayout):
         self.stop_checker()
         # Put some delay before starting again to make sure the existing thread stop first.
         time.sleep(self.t_check)
-        # Re-iitiate device checker in new thread (so that any open popup can just dismiss immediately).
+        # Re-initiate device checker in new thread (so that any open popup can just dismiss immediately).
         self.start_device_checker()
         
 

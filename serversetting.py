@@ -89,7 +89,7 @@ class ServerSetting(FloatLayout):
             # Getting the server object
             self.server_obj = server_item
             # Updating the text with serverObj server address property
-            self.server_address_text.text = server_item.server_address
+            self.server_address_text.text = str(server_item.server_address)
 
 
     def test_server(self, server_ip, port = 8000):
