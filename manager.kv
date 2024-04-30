@@ -33,18 +33,24 @@
         tab_pos : 'left_top'
 
 <ConnectPopup>:
+    
     button : btn
     title: 'Connecting to Server...'
     size_hint: None, None
-    size : 330, 110
+    size : (dp(330), dp(110))
     auto_dismiss : False
+    
     FloatLayout:
+        
         size_hint:(1,1)
+        
         Image:
             source : 'images/settingview/popup_connecting.png'
+            fit_mode : 'contain'
             size_hint : (None, None)
-            size : (dp(90), dp(50))
+            size : (dp(80), dp(40))
             pos_hint : {'x': 0, 'center_y': 0.5}
+        
         Button:
             id : btn
             background_normal : 'images/settingview/btn_popup_cancel.png'

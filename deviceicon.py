@@ -1,6 +1,4 @@
 import threading
-import socket
-import time
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.properties import ObjectProperty, StringProperty, BooleanProperty
@@ -23,63 +21,52 @@ class DeviceIcon(ButtonBehavior, FloatLayout):
     stop_flag = False
     stream_url = ''
     tCheck = 3
-    isConnected = False
+    is_connected = False
+    disabled = True
 
 
     def __init__(self, 
-                 device_name, 
-                 stream_url,
-                 device_enabled,
-                 device_flip,
+                 device,
                  **kwargs):
         super().__init__(**kwargs)
         
-        self.device_name = device_name
-        self.stream_url = stream_url
-        self.device_enabled = device_enabled
-        self.device_flip = device_flip
-        self.disabled = True
+        self.device = device
+        self.wait_device_start()
 
 
-    def ping_device(self):
-
-        '''ping device to check the connectivity'''
+    def wait_device_start(self):
+        # Wait for the device to start
 
         def callback_ok(*args):
             # Enable the item
             self.disabled = False
-            self.isConnected = True
+            self.is_connected = True
             self.statusImage.source = "images/multiview/standby.png"
-            self.deviceLabel.text = "[color=cccccc]"+self.device_name+"[/color]"
+            self.deviceLabel.text = "[color=cccccc]"+self.device.name+"[/color]"
         
         def callback_fail(*args):
             # Disable the item
             self.disabled = False
-            self.isConnected = False
+            self.is_connected = False
             self.statusImage.source = "images/multiview/unavailable.png"
-            self.deviceLabel.text = "[color=777777]"+self.device_name+"[/color]"
+            self.deviceLabel.text = "[color=777777]"+self.device.name+"[/color]"
 
-        def _ping_device(): 
-            
-            for i in range(3):
-                if not self.stop_flag:
-                # Perform 3 times trial
-                    try:
-                        time.sleep(3)
-                        '''ping here'''
-                        pass
-                        break
-                    except Exception as e:
-                        print (f'{e}: Failed getting server ip. Retry {i+1}...')
-                        continue
-            if self.stream_url != '':
-                Clock.schedule_once(callback_ok, 0)
-            else:
-                Clock.schedule_once(callback_fail, 0)
+        def check(): 
 
-        self.disabled = True
-        self.statusImage.source = "images/multiview/connecting.png"
-        t_get_device_ip = threading.Thread(target = _ping_device)
+            with self.device.start_timeout_watcher:
+                # Wait for starting
+                self.device.start_timeout_watcher.wait()
+                # print ('notified', self.device.timeout_watcher)
+                # Device is starting. Wait until timeout
+                if self.device.start_timeout_watcher.wait():
+                    if not self.device.stop_flag:
+                        # Device started OK
+                        Clock.schedule_once(callback_ok, 0)
+                    else:
+                        # timeout
+                        Clock.schedule_once(callback_fail, 0)
+
+        t_get_device_ip = threading.Thread(target = check)
         t_get_device_ip.daemon = True
         t_get_device_ip.start()
 

@@ -34,7 +34,6 @@ class DeviceItem(FloatLayout):
     btn_edit = ObjectProperty(None)
     btn_delete = ObjectProperty(None)
     stop_flag = False
-    is_check_running = False
     stream_capture = None
     
     # bg_img_path = "images/settingview/device_item.png"
@@ -239,7 +238,7 @@ class DeviceItem(FloatLayout):
             ## Loop ended. Stop the stream capture object
             self.stream_capture.stop_flag = True
             self.stream_capture = None
-            print ('Done', self.stream_url)
+            print ('Done', self.name, self.stream_url)
 
         # Starting the server checker thread
         t = Thread(target = check)

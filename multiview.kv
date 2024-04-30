@@ -1,7 +1,7 @@
 #: import livegridlayout livegridlayout
 
 <Multiview>:
-    liveGrid : live_grid_layout
+    live_grid : live_grid_layout
     selectionBox : selection_box
     selectionScroll : selection_scroll
     selectionNextButton : selection_next_button
@@ -41,7 +41,7 @@
             #        size : self.size
             #        pos : self.pos
 
-            GridLayout:   # Grid layout as container for deviceIcons
+            GridLayout:   # Grid layout as container for device_icons
                 id : selection_box
                 rows : 1
                 size_hint : (None, 1)
@@ -56,7 +56,7 @@
             size :  dp(20), dp(20)
             center_y : selection_scroll.center_y
             x : selection_scroll.right + dp(7)
-            disabled : False if (len(root.deviceIcons) > root.selectionInterval and selection_scroll.scroll_x < 1 ) else True
+            disabled : False if (len(root.device_icons) > root.selectionInterval and selection_scroll.scroll_x < 1 ) else True
             opacity : 0 if self.disabled == True else 1
             on_press : root.selection_next_press(self)
         
@@ -67,7 +67,7 @@
             size :  dp(20), dp(20)
             center_y : selection_scroll.center_y
             right : selection_scroll.x - dp(7)
-            disabled : False if (len(root.deviceIcons) > root.selectionInterval and selection_scroll.scroll_x > 0) else True
+            disabled : False if (len(root.device_icons) > root.selectionInterval and selection_scroll.scroll_x > 0) else True
             opacity : 0 if self.disabled == True else 1
             on_press : root.selection_back_press(self)
 

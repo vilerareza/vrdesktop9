@@ -1,35 +1,37 @@
-from threading import Thread
-import requests
 import pickle
 import socket
 import time
 from functools import partial
+from threading import Thread
 
+import requests
+from kivy.clock import Clock
 from kivy.lang import Builder
+from kivy.metrics import dp
 from kivy.properties import ListProperty, ObjectProperty
 from kivy.uix.boxlayout import BoxLayout
-from kivy.clock import Clock
-from kivy.metrics import dp
+from winerror import SPAPI_E_DEVICE_INTERFACE_REMOVED
 
+from device import Device
 from deviceicon import DeviceIcon
 from livebox import LiveBox
 from livegridlayout import LiveGridLayout
 
-
 Builder.load_file("multiview.kv")
+
 
 class MultiView(BoxLayout):
 
     # Grid layout for live stream
-    liveGrid = ObjectProperty(None)
+    live_grid = ObjectProperty(None)
     # Layout for device selection to stream
     selectionBox = ObjectProperty(None)
     # Selection scroll view
     selectionScroll = ObjectProperty(None)
     # List for live stream objects
-    liveBoxes = ListProperty([])
+    live_boxes = ListProperty([])
     # List for device selection icons
-    deviceIcons = ListProperty([])
+    device_icons = ListProperty([])
     # Application manager class
     manager = ObjectProperty(None)
     # Device icon selection scroll buttons
@@ -38,10 +40,12 @@ class MultiView(BoxLayout):
     selectionInterval = 4
     # Server
     serverAddress = []
+    # Devices
+    devices = []
     # Last connected device
     lastConnDevFile = 'data/lastconnecteddev.p'
     isServerTimeout = False
-    stopFlag = False
+    stop_flag = False
 
 
     def __init__(self, server_address_file='data/serveraddress.p', **kwargs):
@@ -88,32 +92,45 @@ class MultiView(BoxLayout):
         def _send_request():
             '''Thread function'''
             # Resetting the stop flag
-            self.stopFlag = False
+            self.stop_flag = False
             # Send request to the server
             isSuccess, r = self.send_request(server_address, 8000, 'api/device/', 5)
             # Sending request complete. Run callback function
             Clock.schedule_once(partial(callback, isSuccess, r), 0)
 
-        def callback(isSuccess, r, *args):
+        def callback(is_success, r, *args):
+            
             '''Thread callback function'''  
-            if isSuccess:
-                devices = r.json()  # Produce list of dict
+            if is_success:
+                devices_json = r.json()  # Produce list of dict
+                
                 # Dismissing popup message
                 self.manager.popup.dismiss()
-                if len(devices) > 0:
-                # Create device icon and livebox object
-                    if self.create_deviceicon_livebox(devices):
-                        self.start_icons()
-                        # Showing initLabel
-                        self.liveGrid.show_initlabel()
+                
+                if len(devices_json) > 0:
+
+                    # Create device objects
+                    devices = self.create_devices(devices_json)
+
+                    # Create device icon and livebox object
+                    self.create_deviceicon_livebox(devices)
+
+                    # Initiate device stream in new thread
+                    t_device_check = Thread(target = self.start_devices_stream)
+                    t_device_check.daemon = True
+                    t_device_check.start()
+
+                    ## Showing initLabel
+                    self.live_grid.show_initlabel() 
+
             else:
-                if self.stopFlag:
+                if self.stop_flag:
                     # Triggered by cancellation                    
                     self.isServerTimeout = True
                     self.manager.popup.title = 'Cancelled. Use last connected device...'
                     self.manager.popup.button.text = 'OK'
                     # Clearing stop flag
-                    self.stopFlag = False
+                    self.stop_flag = False
                 else:
                     # Timeout. Prompting user to acknowledge
                     self.isServerTimeout = True
@@ -122,7 +139,7 @@ class MultiView(BoxLayout):
                     print ('Get devices timeout')
 
         # Clearing previous device stream objects and icons if any
-        if len(self.deviceIcons) > 0:
+        if len(self.device_icons) > 0:
             self.stop_streams()
             self.stop_icons()
 
@@ -132,55 +149,79 @@ class MultiView(BoxLayout):
         t.start()
 
 
+    def create_devices(self, devices_json):
+        # Create device objects based on 'get devices' response from database
+
+        ## Create devices
+        try:
+            for device in devices_json:
+                device_id = device ['id']
+                device_name = device ['name']
+                stream_url = device['stream_url']
+                desc = device['desc']
+                enabled = device['enabled']
+                flip = device['flip']
+
+                device = Device(
+                    device_id = device_id,
+                    name = device_name,
+                    stream_url = stream_url,
+                    desc = desc,
+                    enabled = enabled,
+                    flip = flip,
+                    )
+                self.devices.append(device)
+        
+        except Exception as e:
+            print (f'multiview:create_devices {e}')
+
+        return self.devices
+    
+
     def create_deviceicon_livebox(self, devices):
         '''Create device icon and live box based on 'get devices' response from database'''
 
-        def add_deviceicons_to_selectionbox(device_icons, container):
-            for icon in device_icons:
-                container.add_widget(icon)
-
         # Create device icons
         try:
-            for device in devices:
-                device_name = device ['name']
-                stream_url = device['stream_url']
-                device_enabled = device['enabled']
-                device_flip = device['flip']
-
+            for device_ in devices:
+                
                 # Fill device icon list
-                self.deviceIcons.append(DeviceIcon(
-                    device_name = device_name,
-                    stream_url = stream_url,
-                    device_enabled = device_enabled,
-                    device_flip = device_flip,
+                device_icon = DeviceIcon(
+                    device = device_,
                     size_hint = (None, None),
                     size = (dp(181), dp(45))
                     )
-                )
+
+                # Binding the touch down event to a function
+                device_icon.bind(on_touch_down=self.icon_touch_action)
+                
+                # Appending to a list
+                self.device_icons.append(device_icon)
 
                 # Fill live box object list
-                self.liveBoxes.append(LiveBox(
-                    device_name = device_name
+                self.live_boxes.append(LiveBox(
+                    device = device_
                     )
                 )
+
             # Add deviceIcon content to selection box
-            add_deviceicons_to_selectionbox(device_icons = self.deviceIcons,
-                                            container = self.selectionBox)
-            return True
-        
+            for icon in self.device_icons:
+                self.selectionBox.add_widget(icon)
+
         except Exception as e:
             print (f'multiview:create_device_icon_livebox: {e}')
-            return False
 
 
-    def start_icons(self):
-        '''Start the deviceIcon object to get the device IP'''
-        if (len(self.deviceIcons) > 0):
-            for deviceIcon in self.deviceIcons:
-                # Get the device IP
-                deviceIcon.ping_device()
-                # Binding the touch down event
-                deviceIcon.bind(on_touch_down=self.icon_touch_action)
+    def start_devices_stream(self):
+        '''Start the devices'''
+        #try:
+        for device in self.devices:
+            if self.stop_flag:
+                # Stop starting device if the view is interrupted
+                break
+            device.start_stream()
+        #except:
+        #    print ('Device to start the thread')
 
 
     def send_request(self, server_name, port, url, timeout = 3):
@@ -192,7 +233,7 @@ class MultiView(BoxLayout):
         except:
             # Server IP maybe already changed. Try to find the new IP using server_name           
             for i in range(3):
-                if not self.stopFlag:
+                if not self.stop_flag:
                     try:
                         # Try to get new IP
                         newIP = socket.gethostbyname(server_name)
@@ -220,44 +261,43 @@ class MultiView(BoxLayout):
             print (f'Saving server address failed: {e}')
 
 
-    def icon_touch_action(self, deviceIcon, touch):
+    def icon_touch_action(self, device_icon, touch):
         
         '''When user touch on device icon, show the respective live stream onject (livebox)'''
-        if deviceIcon.collide_point(*touch.pos):
+        if device_icon.collide_point(*touch.pos):
             
-            if not deviceIcon.disabled:
+            # if not device_icon.disabled:
 
-                if deviceIcon.isConnected:
-                    if self.liveBoxes[self.deviceIcons.index(deviceIcon)].status != "play":
-                        # If the live stream object status is not playing then add #
-                        self.show_live_box(deviceIcon)
-                    else:
-                        # If the live stream object status is playing then remove
-                        self.remove_live_box(deviceIcon=deviceIcon)
-                else:
-                    # Try get the device IP again
-                    deviceIcon.get_device_ip()
+            #     if device_icon.is_connected:
+            if self.live_boxes[self.device_icons.index(device_icon)].status != "play":
+                # If the live stream object status is not playing then add #
+                self.show_live_box(device_icon)
+            else:
+                # If the live stream object status is playing then remove
+                self.remove_live_box(deviceIcon=device_icon)
+                # else:
+                #     # Try get the device IP again
+                #     device_icon.get_device_ip()
             
 
-    def show_live_box(self, deviceIcon):
+    def show_live_box(self, device_icon):
         '''Show the live stream object based on selected device icon'''
-        index = self.deviceIcons.index(deviceIcon)
-        deviceIP = deviceIcon.deviceIP
-        if self.liveGrid.nLive == 0:
-            # Removing initLabel
-            self.liveGrid.hide_initlabel()
-        # Start the live steaming object
-        #self.liveBoxes[index].start_live_stream(deviceIP='vr774c6498')
-        self.liveBoxes[index].start_live_stream(deviceIP = deviceIP)   
+
+        # Determine the corresponding live box based on device_icon index
+        live_box_idx = self.device_icons.index(device_icon)
+        # Remove the initLabel if there is no live_box is showing
+        if self.live_grid.nLive == 0:
+            self.live_grid.hide_initlabel()
+        # Show the livebox
+        self.live_boxes[live_box_idx].show_live_stream()   
         # Adjust live grid row and cols for displaying live stream #
         self.adjust_livegrid(action = 'add')
         # Display the live stream object to live grid layout
-        self.liveGrid.add_widget(self.liveBoxes[index])
+        self.live_grid.add_widget(self.live_boxes[live_box_idx])
         # Adjust the livestream to the size of livebox
         self.adjust_livebox_size()
-        # print (f'ROWS : {self.liveGrid.rows} COLS : {self.liveGrid.cols}')
         # Change the icon image to play
-        deviceIcon.statusImage.source = 'images/multiview/play.png'
+        device_icon.statusImage.source = 'images/multiview/play.png'
 
 
     def remove_live_box(self, deviceIcon=None, liveBox=None):
@@ -266,13 +306,13 @@ class MultiView(BoxLayout):
             '''Stop live stream object based on direct request from livebox'''
             liveBox.stop_live_stream()
             # Remove live stream object from live grid layout
-            self.liveGrid.remove_widget(liveBox)
-            self.deviceIcons[self.liveBoxes.index(liveBox)].statusImage.source = 'images/multiview/standby.png'
+            self.live_grid.remove_widget(liveBox)
+            self.device_icons[self.live_boxes.index(liveBox)].statusImage.source = 'images/multiview/standby.png'
         else:
             '''Stop live stream object based on selected device icon'''
-            self.liveBoxes[self.deviceIcons.index(deviceIcon)].stop_live_stream()
+            self.live_boxes[self.device_icons.index(deviceIcon)].stop_live_stream()
             # Remove live stream object from live grid layout
-            self.liveGrid.remove_widget(self.liveBoxes[self.deviceIcons.index(deviceIcon)])
+            self.live_grid.remove_widget(self.live_boxes[self.device_icons.index(deviceIcon)])
             # Change the icon image to standby
             deviceIcon.statusImage.source = 'images/multiview/standby.png'
 
@@ -282,68 +322,68 @@ class MultiView(BoxLayout):
             self.adjust_livebox_size()
         else:
             # Showing initLabel
-            self.liveGrid.show_initlabel()
+            self.live_grid.show_initlabel()
         #print (f'ROWS : {self.liveGrid.rows} COLS : {self.liveGrid.cols}')
 
 
     def adjust_livegrid(self, action = 'add'):
         '''Adjust liveGrid rows and collumns based on add / remove of livebox. Return True if success'''
         if action == 'add':
-            self.liveGrid.nLive +=1
-            rowLimit = self.liveGrid.rows**2 + self.liveGrid.rows
-            if self.liveGrid.nLive > rowLimit:
-                self.liveGrid.rows +=1
-            colLimit = self.liveGrid.cols**2
-            if (self.liveGrid.nLive > colLimit):
-                self.liveGrid.cols +=1
+            self.live_grid.nLive +=1
+            rowLimit = self.live_grid.rows**2 + self.live_grid.rows
+            if self.live_grid.nLive > rowLimit:
+                self.live_grid.rows +=1
+            colLimit = self.live_grid.cols**2
+            if (self.live_grid.nLive > colLimit):
+                self.live_grid.cols +=1
         elif action == 'remove':
-            self.liveGrid.nLive -=1
-            if self.liveGrid.nLive > 0:
-                rowLimit = (self.liveGrid.rows-1)**2 + (self.liveGrid.rows-1)
-                if self.liveGrid.nLive <= rowLimit:
-                    self.liveGrid.rows -=1
-                colLimit = (self.liveGrid.cols-1)**2
-                if (self.liveGrid.nLive <= colLimit):
-                    self.liveGrid.cols -=1
+            self.live_grid.nLive -=1
+            if self.live_grid.nLive > 0:
+                rowLimit = (self.live_grid.rows-1)**2 + (self.live_grid.rows-1)
+                if self.live_grid.nLive <= rowLimit:
+                    self.live_grid.rows -=1
+                colLimit = (self.live_grid.cols-1)**2
+                if (self.live_grid.nLive <= colLimit):
+                    self.live_grid.cols -=1
         # Return the number of livebox    
-        return self.liveGrid.nLive
+        return self.live_grid.nLive
 
     def adjust_livebox_size(self, *args):
         '''Adjust the size of individual livebox based on the row and col in the liveGrid'''
-        cell_width = ((self.liveGrid.width - self.liveGrid.spacing[0]*(self.liveGrid.cols-1))/
-                    self.liveGrid.cols)
-        cell_height = ((self.liveGrid.height - self.liveGrid.spacing[0]*(self.liveGrid.rows-1))/
-                    self.liveGrid.rows)
-        for livebox in self.liveBoxes:
+        cell_width = ((self.live_grid.width - self.live_grid.spacing[0]*(self.live_grid.cols-1))/
+                    self.live_grid.cols)
+        cell_height = ((self.live_grid.height - self.live_grid.spacing[0]*(self.live_grid.rows-1))/
+                    self.live_grid.rows)
+        for livebox in self.live_boxes:
             livebox.adjust_self_size(size = (cell_width, cell_height))
             # Disabled audio and download button on livebox if there is > 1 livebox
-            if self.liveGrid.nLive > 1:
+            if self.live_grid.nLive > 1:
                 livebox.reduce_action_control()
-            if self.liveGrid.nLive == 1:
+            if self.live_grid.nLive == 1:
                 livebox.restore_action_control()
         #print (f'GRID SIZE {self.liveGrid.size}, CELL SIZE {cell_width}, {cell_height}')
 
     def stop_icons(self):
         '''Trigger deviceIcon objects to stop running thread'''
-        for deviceIcon in self.deviceIcons:
+        for deviceIcon in self.device_icons:
             deviceIcon.stop()
         self.selectionBox.clear_widgets()
-        self.deviceIcons.clear()
+        self.device_icons.clear()
 
     def stop_streams(self):
         '''Stop live streams anyway'''
-        for liveBox in self.liveBoxes:
+        for liveBox in self.live_boxes:
             liveBox.stop_live_stream()
         # Reset and clearing widgets from liveGrid
-        self.liveGrid.clear_widgets()
-        self.liveGrid.nLive = 0
-        self.liveGrid.rows = 1
-        self.liveGrid.cols = 1
+        self.live_grid.clear_widgets()
+        self.live_grid.nLive = 0
+        self.live_grid.rows = 1
+        self.live_grid.cols = 1
         # Clear the list of live stream objects
-        self.liveBoxes.clear()
+        self.live_boxes.clear()
 
     def stop(self):
-        self.stopFlag = True
+        self.stop_flag = True
         self.stop_streams()
         self.stop_icons()
   
@@ -363,18 +403,17 @@ class MultiView(BoxLayout):
         # Callback function for manager popup button
         if not self.isServerTimeout:
             popup.title = 'Cancelling...'
-            self.stopFlag = True
+            self.stop_flag = True
         else:
             popup.dismiss()
             # Unable to get devices from server. Try getting the last connected device from file
             with open(self.lastConnDevFile, 'rb') as file:
                 devices = pickle.load(file)
             if len(devices) > 0:
+                pass
                 # Create device icon and livebox object
-                if self.create_deviceicon_livebox(devices):
-                    self.start_icons()
+                #if self.create_deviceicon_livebox(devices):
+                #    self.start_icons()
                     # Showing initLabel
-                    self.liveGrid.show_initlabel()
+                #    self.liveGrid.show_initlabel()
             self.isServerTimeout = False
-
-

@@ -4,6 +4,7 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.properties import NumericProperty, ObjectProperty
 from kivy.core.window import Window
+from kivy.metrics import dp
 
 Builder.load_file('livegridlayout.kv')
 
@@ -15,7 +16,7 @@ class LiveGridLayout(GridLayout):
 
     def show_initlabel(self):
         #self.add_widget(self.initLabel)
-        self.add_widget(Label(text = '[color=cccccc]Select a Device to Start...[/color]', font_size = 17,
+        self.add_widget(Label(text = '[color=cccccc]Select a Device to Show...[/color]', font_size = dp(17),
                         font_family = "arial", markup = True))
 
     def hide_initlabel(self):
